@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta 
+    name="viewport" 
+    content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>NI Property Values</title>
+  <meta 
+    name="description" 
+    content="A map of property values for Northern Ireland
+             showing affordability of each postcode and a 
+             calculator for estimating the typical price of
+             a house in any area.">
+  <meta name="theme-color" content="linen">
+  <link rel="apple-touch-icon" href="/static/house_609803_flaticon.png">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ==" crossorigin=""/>
+
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="https://getbootstrap.com/docs/5.2/dist/css/bootstrap.min.css" media="screen">
+  <link href="https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap4.min.css" rel="stylesheet" type="text/css">
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href='https://fonts.googleapis.com/css2?family=Gafata&display=swap' >
+  <link rel="stylesheet" href="/static/fontawesome-free-5.15.1-web/css/all.min.css">
+
+  <!--jquery UI autocomplete -->
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+  <!-- Marker cluster https://github.com/Leaflet/Leaflet.markercluster -->
+  <link rel="stylesheet" src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+
+  <!-- Search bar https://github.com/stefanocudini/leaflet-search -->
+  <link rel="stylesheet" href='/static/leaflet-search/leaflet-search.css'>
+
+  <!-- My styling -->
+  <link rel="stylesheet" href='/static/hp_style.css' type="text/css">
+
+  <!-- Favicon for browser tab -->
+  <link rel="shortcut icon" href="/static/house_609803_flaticon.png">
+
+  <style>
+    .legend { text-align: left; line-height: 14px; color: #555; padding: 6px 8px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+    .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; opacity: 0.7; }
+
+    .mycluster_a11228 { background-color: #a11228; border-radius:50%; }
+    .mycluster_1b5a9b { background-color: #1b5a9b; border-radius:50%; }
+    .mycluster_c53f3d { background-color: #c53f3d; border-radius:50%; }
+    .mycluster_df755d { background-color: #df755d; border-radius:50%; }
+    .mycluster_f5a987 { background-color: #f5a987; border-radius:50%; }
+    .mycluster_fcd3bc { background-color: #fcd3bc; border-radius:50%; }
+    .mycluster_c7e0ed { background-color: #c7e0ed; border-radius:50%; } 
+    .mycluster_97c7df { background-color: #97c7df; border-radius:50%; }
+    .mycluster_5ba2cb { background-color: #5ba2cb; border-radius:50%; }
+    .mycluster_337eb8 { background-color: #337eb8; border-radius:50%; }
+
+    .mycluster_7f4909 { background-color: #7f4909; border-radius:50%; }
+    .mycluster_a76b1d { background-color: #a76b1d; border-radius:50%; }
+    .mycluster_c99546 { background-color: #c99546; border-radius:50%; }
+    .mycluster_e1c582 { background-color: #e1c582; border-radius:50%; }
+    .mycluster_f2e2b8 { background-color: #f2e2b8; border-radius:50%; }
+    .mycluster_bce6df { background-color: #bce6df; border-radius:50%; }
+    .mycluster_85cfc4 { background-color: #85cfc4; border-radius:50%; }
+    .mycluster_4ca89e { background-color: #4ca89e; border-radius:50%; }
+    .mycluster_1d8078 { background-color: #1d8078; border-radius:50%; }
+    .mycluster_015c53 { background-color: #015c53; border-radius:50%; }
+
+    .mycluster_156c31 { background-color: #156c31; border-radius:50%; }
+    .mycluster_3d954e { background-color: #3d954e; border-radius:50%; }
+    .mycluster_71bc74 { background-color: #71bc74; border-radius:50%; }
+    .mycluster_aadda4 { background-color: #aadda4; border-radius:50%; }
+    .mycluster_d1edcb { background-color: #d1edcb; border-radius:50%; }
+    .mycluster_e1cde4 { background-color: #e1cde4; border-radius:50%; }
+    .mycluster_c5a9d1 { background-color: #c5a9d1; border-radius:50%; }
+    .mycluster_a680b6 { background-color: #a680b6; border-radius:50%; }
+    .mycluster_895099 { background-color: #895099; border-radius:50%; }
+    .mycluster_6a2076 { background-color: #6a2076; border-radius:50%; }
+  </style>
+</head>
+
+<body>
+  
+  <header>
+    <div class='container'>
+      <div class='row my-4 justify-content-md-center'>
+        <div class='col-md-8'>
+          <h1>The Northern Ireland Property Value Map</h1>
+          
+          <p>The map shows the estimated <b>value added to a property, per square metre, by each postcode</b> in Northern Ireland.</p> 
+
+          <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas. Prices are from September 2022. Some postcodes are not present in the data due to an insufficient number of properties found in the Land & Property Service (LPS) data (see <b>How it works</b>).</p>
+
+          <p>The map data can be viewed by individual postcode, or with postcodes grouped together by government Super Output Areas (SOAs) <span class='help-tooltip' title='A NISRA geography that divides Northern Ireland into 890 areas of approximately equal population' data-toggle="tooltip"><i class="fas fa-question-circle fa-sm"></i></span>. Data can be filtered to show only houses or only flats/apartments, and searched by postcode.</p>                    <!--https://www.opendatani.gov.uk/blog/data-aggregation-levels-of-geography-in-ni-->          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  
+  <main>
+    <div class='container'>
+
+      <div class='row pb-2 justify-content-md-center'>
+        <div class='col-md-12'>
+          <div id="map" class="map map-home" style="height: 600px; margin-top: 30px"></div>
+        </div>
+      </div>
+
+      <div class='row pt-4 justify-content-md-center'>
+        <div class='col-md-8'>
+
+          <center>
+            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#myModal" style='font-size: 1.3em;'>
+              How it works
+            </button>
+
+            <div class="modal fade" id="myModal">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+
+                  <div class="modal-header">
+                    <h4 class="modal-title">How it works</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+
+                  <div class="modal-body">
+                              
+                    <h1>Data and modelling</h1>
+
+                    <p>Property data, including 2005 valuations, are from <a href='https://www.finance-ni.gov.uk/topics/property-valuation/domestic-valuation' target='_blank'>Land & Property Services.</a> These values are updated to 2022 using <a href='https://www.finance-ni.gov.uk/articles/northern-ireland-house-price-index' target='_blank'>NISRA's Northern Ireland House Price Index</a>, using separate factors for houses and flats/apartments, but only at the granularity of local government district (LGD) level. Price levels and the high-level structure of the map are therefore representative of 2022, but small-scale patterns shown are from 2005, and may have changed slightly since then, where some areas within an LGD have become relatively more desirable than others.</p>
+                              
+                    <p>Values for each postcode come from a simple statistical model of <b>price per square metre</b>, trained on the LPS data:</p>
+
+                    <p style='display: block; font-style: italic; margin-right: 50px; margin-left: 50px'>PricePerSquareMetre ~ HouseOrFlat + HasGarage + HasGarden + HasYard + HasOtherOutbuilding + Postcode</p>
+
+                    <p>A coefficient is only calculated for postcodes with at least 10 properties in the LPS data, and a small spatial smoothing is applied to the results, weighted by the number of properties that were used in each postcode.</p>
+
+                    <p>These postcode coefficients are what is shown in the map. These terms capture <b>the value of the area itself</b>, independent of the particular kinds of properties (size, etc.) that are found in the area.</p>
+
+                    <h1>Validation</h1>
+                    
+                    <p>The primary purpose of the map is to show the value of areas relative to each other, but for the affordability calculator to be useful, the price model must be accurately calibrated for 2022 asking prices. A sample of <b>sales listings</b> was obtained from three NI property agent websites in January 2023 and used to evaluate the model predictions. Property type, presence of garden, etc., and floor area were scraped from the listings, and model performance is reliant on the accuracy of this information.</p>
+
+                    <p>The first plot shows listed against predicted price per square metre, for 205 listed properties, excluding new builds, averaged to postcode (most postcodes have only a single property in the January 2023 selection). Predictions are evenly spread across the 1:1 line, indicating that predicted prices are well-calibrated (not consistently too high or too low). The Spearman rank correlation coefficient <i>r</i>, which measures the accuracy of the ordering of postcodes by price per square metre, is <b>0.53</b>, indicating low to moderate predictive skill; a more complex model would be required to increase this measure.</p>
+
+                    <img src='static/nihousepricemap_validation_plot_1.png' class='modal-plot' style='width: 70%'>
+
+                    <p>The second plot shows the predictions by listings agent and property type, and includes new builds, which mostly come from Agent 2. The model does not explicitly handle new builds, so an empirical scaling of factor of 1.4 is applied to predicted prices in this case. This captures quite well the premium that new build listings carry compared to resale properties; e.g., see <a href='https://news.twentyea.co.uk/blog/the-new-build-price-premium-how-much-more-will-we-pay-for-a-brand-new-property' target='_blank'>here</a>. When only a short postcode is listed for a new build, the 70th percentile of the predictions for that short postcode is used (and the 10-90th percentile range shown in the plot), because often new builds are part of a new long postcode that becomes more desirable than the average for that short postcode. Apartment price predictions, in this sample, are slightly too low.</p>
+
+                    <img src='static/nihousepricemap_validation_plot_2.png' class='modal-plot' style='width: 85%'>
+
+                    <p>The aim here is not to create the most accurate price model possible; this would require obtaining many more property characteristics, such as number of bedrooms, quality of fittings, and so on. The affordability calculator only indicates the price of a typical property of a given size in each postcode. The plots above show, however, that the price model performs reasonably well at separating postcodes by property value, and is well calibrated for 2022 prices.</p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </center>
+          
+        </div>
+      </div>
+
+      <div class='row my-4 justify-content-md-center'>
+        <div class='col-xl-6 col-lg-7 col-md-9 col-sm-10'>
+
+          <div class="row no-gutters border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
+            <div class="col py-4 px-4 d-flex flex-column position-static afford_calc_box">
+              <h2>Affordability calculator</h2>
+
+              <p>Enter details of a hypothetical property and a postcode (either half or full), and the calculator returns the typical expected 2022 price for that property, based on the price per square metre model. This is only a rough indication, and cannot account for the unique features of a particular listed property, but can be used to estimate what combinations of location and property characteristics are affordable on your budget.</p>
+              
+              <form class='row mx-2 my-2 needs-validation' id='calc_form' onsubmit='return run_calculator()'>
+
+                <div class='row mb-2'>
+                  <div class='col-4'>
+                    <p>I'm looking for a...</p>
+                  </div>
+                  <div class='col-6'>
+                    <input type="radio" class="form-check-input" id="calc_hometype_h" name='calc_hometype' aria-describedby='calc_hometype_help' checked onchange="showGarageGarden()">
+                    <label for="calc_hometype_h" class="form-label">House</label>
+                    <input type="radio" class="form-check-input px-2" id="calc_hometype_f" name='calc_hometype' aria-describedby='calc_hometype_help' onchange="hideGarageGarden()">
+                    <label for="calc_hometype_f" class="form-label">Flat</label>
+                  </div>
+                </div>
+
+                <div class='row d-flex align-items-end'>
+                  <div class="col-6">
+                    <label for='calc_size' class='form-label mx-2'>...with floor size (including garage):</label>
+                  </div>
+                  <div class="col-6">
+                    <label for="calc_postcode" class="form-label mx-2">...in postcode (full or half):</label>
+                  </div>
+                </div>
+                <div class='row mb-2'>
+                  <div class="col-6">
+                    <!--<input type="text" class="form-control" aria-label="calc_size" id='calc_size' name='calc_size' placeholder="Area in m&sup2;" required>-->
+                    <input type='number' min=10 max=500 class='form-control' aria-label='calc_size' id='calc_size' name='calc_size' placeholder='Area in m&sup2;' required style='width: 150px'>
+                  </div>
+
+                  <div class="col-6">
+                    <input type="text" class="form-control" id="calc_postcode" name='calc_postcode' placeholder="Enter postcode, half or full"  required style='width: 150px'>
+                    <div class="invalid-feedback">Please provide a valid postcode.</div>
+                  </div>
+                </div>
+
+                <div class='row mb-2'>
+                  <div class="col-6" id='garage_col'>
+                    <label class="form-label" for="calc_garage_yn">...with garage?</label>
+                    <select class="form-select" id="calc_garage_yn" name='calc_garage_yn' style='width: 100px'>
+                      <option selected>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </div>
+                  <div class="col-6" id='garden_col'>
+                    <label class="form-label" for="calc_garden_yn">...with garden?</label>
+                    <select class="form-select" id="calc_garden_yn" name='calc_garden_yn' style='width: 100px'>
+                      <option selected>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class='row mb-2'>
+                  <div class="col-9">
+                    <label class="form-label" for="calc_garden_yn">...that is a new build?</label>
+                    <select class="form-select" id="calc_newbuild_yn" name='calc_newbuild_yn' style='width: 100px'>
+                      <option>Yes</option>
+                      <option selected>No</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class='row my-3 justify-content-md-center'>
+                  <div class='col-3'>
+                    <button type="submit" class="btn btn-primary" style='font-size: 1.2em;'>Calculate</button>
+                  </div>
+                </div>
+              </form>
+
+              <p id='calc_output'></p>
+
+              <p id='calc_output_2'></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class='row my-4 justify-content-md-center'>
+        <div class='col-md-10'>
+
+          <div class="row no-gutters border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
+            <div class="col py-4 px-4 d-flex flex-column position-static postcode_table_box">
+              <h2>Postcode lookup</h2>
+
+              <p>Press return in the Search box to filter by either Postcode or Area (SOA). Click column headers to sort by column.</p>
+              <p>Only postcodes with at least 10 domestic properties, of type House or Flat, in the LPS data are included. </p>
+              
+              <table id="postcodes-all-table" class="table table-striped table-bordered" style='width: 100%; font-size: 0.9em'>
+                <thead>
+                  <tr>
+                    <th>Postcode</th>
+                    <th>Area (SOA)</th>
+                    <th>Price per sq. m<br/>compared to average</th>
+                    <th>Mean actual price</th>
+                    <th>Mean size</th>
+                    <th>Longitude</th>
+                    <th>Latitude</th>
+                  </tr>
+                </thead>
+              </table>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <div class="container-fluid">
+        <div class='row justify-content-end' style='font-size: 0.7em'>
+          <div class='col-12 text-end'>
+            <p>© 2023 David Mulholland. Favicon made by <a href="https://www.flaticon.com/free-icons/home" title="home icons">Vectors Market - Flaticon</a></p> 
+          </div>
+        </div>
+      </div>
+    </footer>
+    
+  </main>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js" integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ==" crossorigin=""></script>
+
+  <!-- Load jQuery and PapaParse to read data from a CSV file -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+  <!-- Popper.JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+  <!-- DataTables -->
+  <script src="https://cdn.datatables.net/1.11.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.4/js/dataTables.bootstrap4.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
+
+  <!--jquery UI autocomplete -->
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+  <!--Marker clusters-->
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+  <!--Search bar (modified to work with Circles-->
+  <script src="/static/leaflet-search/leaflet-search.src.js"></script>
+
+  <script type="text/javascript">
+
+    //TODO something to fix this
+    // $(function () {
+    //   $('[data-toggle="tooltip"]').tooltip()
+    // });
+
+    function showGarageGarden() {
+      document.getElementById("garage_col").style.display="block";
+      document.getElementById("garden_col").style.display="block";
+    }
+    function hideGarageGarden() {
+      document.getElementById("garage_col").style.display="none";
+      document.getElementById("garden_col").style.display="none";
+    }
+    
+    let map = L.map('map', {
+      center: [54.63, -6.55],
+      //zoom: 8.6, zoomSnap: 0.1, //for a good screenshot
+      zoom: 8,
+      maxZoom: 16,
+      minZoom: 8,
+      maxBounds: L.latLngBounds(L.latLng(57.5,-12.5), L.latLng(52.5,-1.0))
+    });
+
+    let osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      osm = L.tileLayer(osmUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
+
+    let cartoUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', 
+      CartoDB_Positron = L.tileLayer(cartoUrl, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd'
+    });
+
+    let baseMaps = {
+      "CartoDB Positron": CartoDB_Positron,
+      "OpenStreetMap": osm
+    };
+
+    CartoDB_Positron.addTo(map);
+
+    //https://stackoverflow.com/questions/37189484/how-to-add-a-search-box-on-a-leaflet-map
+    //how does this work without a provider and ArcGIS API key?!
+    //var searchControl = new L.esri.Controls.Geosearch().addTo(map);
+
+    function sort_layers(layerA, layerB, nameA, nameB) {
+      const my_order = [
+        '50x50 grid', 
+        'SOAs',
+        'Postcodes',
+        'Postcodes - Houses', 
+        'Postcodes - Flats',
+        'Postcodes - All'
+      ];
+      if (my_order.indexOf(nameA) != -1) {
+        return my_order.indexOf(nameA) > my_order.indexOf(nameB);
+      } else {
+        return 1;
+      }
+    }
+
+    let layerControlPoints = L.control.layers(null, null, {
+      position: "topright",
+      collapsed: false,
+      sortLayers: true,
+      sortFunction: sort_layers
+    }).addTo(map)
+
+    //add this control below the points one
+    let layerControl = L.control.layers(baseMaps, null, {
+      position: "topright",
+      collapsed: true
+    }).addTo(map)
+
+    // function make_circles_layer_group (csvString, radius) {
+    //   let data = Papa.parse(csvString, {header: true, dynamicTyping: true}).data;
+
+    //   const circles_2 = [];
+    //   for (var i = 0; i < data.length-1; i++) {
+    //     var row = data[i];
+        
+    //     var circle = L.circle([row.latitude, row.longitude], {
+    //       radius: radius, 
+    //       color: row.html_colour, 
+    //       fillColor: row.html_colour,
+    //       opacity: 1, 
+    //       weight: 2,
+    //       fillOpacity: 0.3
+    //     }).bindPopup(
+    //         row.popup_text
+    //       ).on(
+    //         'mouseover', function(e) {
+    //           e.target.setStyle({
+    //             weight: 5,
+    //             fillOpacity: 0.6
+    //           }),
+    //           e.target.setRadius(radius*1.2)
+    //         }
+    //       ).on(
+    //         'mouseout', function(e) {
+    //           e.target.setStyle({
+    //             weight: 2,
+    //             fillOpacity: 0.3
+    //           }),
+    //           e.target.setRadius(radius)
+    //         }
+    //       );
+
+    //     circle['searchText'] = row.popup_text.split('</b>')[0].slice(3);
+    //     circles_2.push(circle);
+    //     //circles_2.push(new L.Marker(new L.latLng([row.latitude, row.longitude]), {title: 'hello'}));
+    //   }
+    //   return L.layerGroup(circles_2);
+    // }
+
+    function populate_clustergroup (csvString, radius) {
+      let data = Papa.parse(csvString, 
+        {header: true, dynamicTyping: true}).data;
+
+      var markers = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        disableClusteringAtZoom: 13,
+        spiderfyOnMaxZoom: false,
+        maxClusterRadius: 10,  //TODO replace with function(zoomlevel)
+        removeOutsideVisibleBounds: true,
+        iconCreateFunction: function(cluster) {
+          var markers = cluster.getAllChildMarkers();
+          var colour_list = markers.map(function(value) {
+            return value.options.color;
+          });
+          //https://stackoverflow.com/questions/53509971/get-most-occurring-elements-in-array-javascript
+          let colour_counts = colour_list.reduce((a,c) => {
+            a[c] = (a[c] || 0) + 1;
+            return a;
+          }, {});
+          let maxCount = Math.max(...Object.values(colour_counts));
+          let mostFrequent = Object.keys(colour_counts).filter(
+            k => colour_counts[k] === maxCount);
+          return L.divIcon({
+            iconSize: 8,
+            className: "mycluster_".concat(mostFrequent[0].slice(1))
+          });  
+        }
+      });
+
+      const circles_3 = [];
+      for (var i = 0; i < data.length-1; i++) {
+        var row = data[i];
+        
+        var circle = L.circle([row.latitude, row.longitude], {
+          radius: radius, 
+          color: row.html_colour, 
+          fillColor: row.html_colour,
+          opacity: 1, 
+          weight: 2,
+          fillOpacity: 0.3,
+          mytext: 'hello'
+        }).bindPopup(
+            row.popup_text
+          ).on(
+            'mouseover', function(e) {
+              e.target.setStyle({
+                weight: 5,
+                fillOpacity: 0.6
+              }),
+              e.target.setRadius(radius*1.2)
+            }
+          ).on(
+            'mouseout', function(e) {
+              e.target.setStyle({
+                weight: 2,
+                fillOpacity: 0.3
+              }),
+              e.target.setRadius(radius)
+            }
+          );
+        circle['searchText'] = row.popup_text.split('</b>')[0].slice(3);
+        circles_3.push(circle);
+      }
+      markers.addLayers(circles_3);
+      return markers;
+    }
+
+    let props_glm;
+
+    $.get('./static/ppsqm_nge10_glmmethod_smoothed_alpha3000_houses.csv', function(csvString) {
+      layerControlPoints.addBaseLayer(
+        populate_clustergroup(csvString, 30), 'Postcodes - Houses');
+    });
+
+    $.get('./static/ppsqm_nge10_glmmethod_smoothed_alpha3000_flats.csv', function(csvString) {
+      layerControlPoints.addBaseLayer(
+        populate_clustergroup(csvString, 60), 'Postcodes - Flats');
+    });
+
+    $.get('./static/ppsqm_nge10_glmmethod_smoothed_alpha3000.csv', function(csvString) {
+      //props_glm = make_circles_layer_group(csvString, 30);
+      //props_glm.addTo(map);
+      //layerControlPoints.addBaseLayer(props_glm, 'Postcodes - All');
+
+      props_glm = populate_clustergroup(csvString, 30);
+      props_glm.addTo(map);
+      layerControlPoints.addBaseLayer(props_glm, 'Postcodes - All');
+
+      //Search by postcode in local data
+      var controlSearch = new L.Control.Search({
+        position:'topleft',    
+        layer: props_glm,
+        propertyName: 'searchText',
+        initial: false,
+        zoom: 16,
+        marker: false,
+        minLength: 3,
+        tooltipLimit: 5,
+        textPlaceholder: 'Search postcode...'
+      });
+      map.addControl(controlSearch);
+      
+      //Search by address using Nominatim
+      //https://operations.osmfoundation.org/policies/nominatim/
+      //Possibly shouldn't do the tooltip but it is limited to 1 per second
+      // map.addControl( new L.Control.Search({
+      //   url: 'https://nominatim.openstreetmap.org/search?format=json&q={s}',
+      //   jsonpParam: 'json_callback',
+      //   propertyName: 'display_name',
+      //   propertyLoc: ['lat','lon'],
+      //   marker: false,
+      //   autoCollapse: true,
+      //   autoType: false,
+      //   minLength: 5,
+      //   delayType: 1000,
+      //   tooltipLimit: 5,
+      //   zoom: 16,
+      //   textPlaceholder: 'Search address...'
+      // }) );
+    });
+
+    //Geojson layer for SOA
+    $.get('./static/ppsqm_nge10_LSOAglmmethod.json', function(geojsonString) {
+      props_gj = L.geoJson(geojsonString, {
+        style: function (feature) {
+          return {
+            color: feature.properties.html_colour,
+            fillOpacity: 0.3,
+            weight: 1
+          };
+        },
+        onEachFeature: onEachFeature
+      }).bindPopup(function (layer) {
+        return layer.feature.properties.popup_text;
+      });
+      layerControlPoints.addBaseLayer(props_gj, 'SOAs');
+    });
+
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: function (e) {
+          var layer = e.target;
+
+          layer.setStyle({
+            weight: 2.5,
+            fillOpacity: 0.5
+          });
+
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+              layer.bringToFront();
+          }
+        },
+        mouseout: function (e) {props_gj.resetStyle(e.target)}
+      });
+    };
+
+    //TODO try https://github.com/ismyrnow/leaflet-groupedlayercontrol
+
+    // map.on('zoomend', function(e) {
+    //   if (e.sourceTarget._zoom == 12) {
+    //     console.log('Zoom = 12 so may make circles bigger');
+    //     props_glm.eachLayer(function(layer) {
+    //       layer.setRadius(50);
+    //     });
+    //   } else if (e.sourceTarget._zoom == 11) {
+    //     console.log('Zoom = 11, back to original size');
+    //     props_glm.eachLayer(function(layer) {
+    //       layer.setRadius(30);
+    //     });
+    //   } else if (e.sourceTarget._zoom == 9) {
+    //     console.log('Zoom = 9 so may make circles smaller');
+    //     props_glm.eachLayer(function(layer) {
+    //       layer.setRadius(300);
+    //     });
+    //   } else if (e.sourceTarget._zoom == 10) {
+    //     console.log('Zoom = 10, back to original size');
+    //     props_glm.eachLayer(function(layer) {
+    //       layer.setRadius(30);
+    //     });
+    //   }
+    // });
+
+    // Colourbar
+    var legend = L.control({position: 'bottomright'});
+    //added within colour band csv read in below
+
+    // Map footer
+    map.attributionControl.setPrefix('');
+
+    let pns_short, pns_long;
+    let calculator_coefs;
+    let colour_bands_flats, colour_bands_houses, colour_bands_soas;
+
+    function run_calculator() {
+      let form_map = new Map();
+      $.each($("#calc_form").serializeArray(), function(i, field) {
+        form_map.set(field.name, field.value);
+      });
+
+      form_map.set('calc_hometype_House', false);
+      form_map.set('calc_hometype_Flat', false);
+      var radios = document.getElementsByName('calc_hometype');
+      $.each(radios, function(i, field) {
+        if (field.checked) {
+          if (field.id === 'calc_hometype_h') {
+            form_map.set('calc_hometype_House', true);
+          } else {
+            form_map.set('calc_hometype_Flat', true);
+          }
+        }
+      });
+
+      let coefs = new Map();
+      let coefs_pc10 = new Map();
+      let coefs_pc90 = new Map();
+      $.each(calculator_coefs, function(i, field) {
+        coefs.set(field.coef, parseFloat(field.value_mean.toFixed(2)));
+        if (field.value_pc10 !== null) {
+          coefs_pc10.set(field.coef, parseFloat(field.value_pc10.toFixed(2)));
+          coefs_pc90.set(field.coef, parseFloat(field.value_pc90.toFixed(2)));
+        }
+      });
+
+      if (coefs.has(form_map.get('calc_postcode').trim().toUpperCase())) {
+        let postcode_choice = form_map.get('calc_postcode').trim().toUpperCase();
+        let pred_ppsqm = 0.0;
+        let price_string = "Typical price for a ";
+
+        if (form_map.get('calc_newbuild_yn') == 'Yes') {
+          price_string += 'new build '
+        }
+
+        //radio button house/flat appears only as the one selected with value 'on'
+        if (form_map.get('calc_hometype_House')) {
+          pred_ppsqm += coefs.get('home_type_House');
+          price_string += "<b>house</b> "
+        } else {
+          pred_ppsqm += coefs.get('home_type_Flat');
+          price_string += "<b>flat</b> "
+        }
+
+        price_string += "with area <b>" + parseInt(form_map.get('calc_size')) + "m<sup>2</sup></b> "
+
+        if (form_map.get('calc_hometype_House')) {
+          if (form_map.get('calc_garage_yn') == 'Yes') {
+            pred_ppsqm += coefs.get('has_garage_01');
+            price_string += "and a garage "
+          }
+
+          if (form_map.get('calc_garden_yn') == 'Yes') {
+            pred_ppsqm += coefs.get('has_garden_01');
+            price_string += "and a garden "
+          }
+        }
+
+        pred_ppsqm_mean = pred_ppsqm + coefs.get(postcode_choice);
+        pred_ppsqm_pc10 = pred_ppsqm + coefs_pc10.get(postcode_choice);
+        pred_ppsqm_pc90 = pred_ppsqm + coefs_pc90.get(postcode_choice);
+        price_string += "in <b>" + postcode_choice + "</b>, is "
+
+        //*1.4 for new build
+        if (form_map.get('calc_newbuild_yn') == 'Yes') {
+          pred_ppsqm_mean *= 1.4;
+          pred_ppsqm_pc10 *= 1.4;
+          pred_ppsqm_pc90 *= 1.4;
+          // If only a short postcode is provided, move the mean
+          //    prediction to the 70th percentile for the short postcode
+          if (postcode_choice.length <= 4) {
+            pred_ppsqm_mean = pred_ppsqm_pc10 + 0.75*(pred_ppsqm_pc90-pred_ppsqm_pc10)
+          }
+        }
+
+        //This is price per sq metre; now scale to area
+        pred_price_mean = 1000*(parseInt(pred_ppsqm_mean) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+        pred_price_pc10 = 1000*(parseInt(pred_ppsqm_pc10) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+        pred_price_pc90 = 1000*(parseInt(pred_ppsqm_pc90) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+
+        price_string += ` <span style='font-size: 1.8em; color: dodgerblue'><b>£${pred_price_mean.toLocaleString()}</b></span>`
+        if (postcode_choice.length <= 4) 
+          price_string += ` (<b>£${pred_price_pc10.toLocaleString()}&ndash;${pred_price_pc90.toLocaleString()}</b>)`
+        $('#calc_output').html(price_string);
+
+        let nearest_postcodes = pns_short.concat(pns_long).filter(
+          function(value) { 
+            return value.postcode==postcode_choice
+          })[0];
+        let comparison_string = "The same property <ul>"
+
+        var npc_hits = 0;
+        for (i = 1; i <= 5; i++) {
+          var near_pc = nearest_postcodes[`nearest_pcs_${i}`];
+          
+          if (coefs.get(near_pc) !== undefined) {
+            npc_hits += 1;
+            near_pc_pred_ppsqm_mean = pred_ppsqm + coefs.get(near_pc);
+            near_pc_pred_ppsqm_pc10 = pred_ppsqm + coefs_pc10.get(near_pc);
+            near_pc_pred_ppsqm_pc90 = pred_ppsqm + coefs_pc90.get(near_pc);
+
+            //*1.4 for new build
+            if (form_map.get('calc_newbuild_yn') == 'Yes') {
+              near_pc_pred_ppsqm_mean *= 1.4;
+              near_pc_pred_ppsqm_pc10 *= 1.4;
+              near_pc_pred_ppsqm_pc90 *= 1.4;
+              //and mean to 70th percentile for these short postcodes
+              near_pc_pred_ppsqm_mean = near_pc_pred_ppsqm_pc10 + 0.75*(near_pc_pred_ppsqm_pc90-near_pc_pred_ppsqm_pc10)
+            }
+
+            near_pc_pred_price_mean = 1000*(parseInt(near_pc_pred_ppsqm_mean) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_pc10 = 1000*(parseInt(near_pc_pred_ppsqm_pc10) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_pc90 = 1000*(parseInt(near_pc_pred_ppsqm_pc90) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+
+            comparison_string += `<li>in ${near_pc} would cost, on average, <b>£${near_pc_pred_price_mean.toLocaleString()}</b> (£${near_pc_pred_price_pc10.toLocaleString()}&ndash;${near_pc_pred_price_pc90.toLocaleString()}) `
+            if (near_pc_pred_price_mean > pred_price_mean + 1000) {
+              comparison_string += "<span style='color: red; font-weight: bold; font-size: 1.2em'>&nearr;</span>"
+            } else if (near_pc_pred_price_mean < pred_price_mean - 1000) {
+              comparison_string += "<span style='color: green; font-weight: bold; font-size: 1.2em'>&searr;</span>"
+            }
+            comparison_string += '</li>'
+          }
+          if (npc_hits == 3) break;
+        }
+        comparison_string += '</ul>'
+
+        $('#calc_output_2').html(comparison_string);
+
+      } else {
+        $('#calc_output').html('Postcode not found');
+        $('#calc_output_2').html(null);
+      }
+
+      return false;
+    }
+
+    // Legend changes
+    function get_legend_label_from_colour_bands_array(o, index, arr) {
+      var lab = '<i style="background: ' + o.html_colour + '"></i>'
+      if (index == 0) {
+        //Make sure using .reverse on values at read in
+        lab += 'Highest 10%'
+      } else if (arr.length == 7 && index == 3) {
+        lab += 'Average'
+      } else if (index == arr.length-1) {
+        lab += 'Lowest 10%'
+      } 
+      return lab;
+    }
+    map.on('baselayerchange', function(e) { 
+      if (e.name == 'Postcodes - Flats') {
+        var new_labels = colour_bands_flats.map(get_legend_label_from_colour_bands_array);
+        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      } else if (e.name == 'Postcodes - Houses') {
+        var new_labels = colour_bands_houses.map(get_legend_label_from_colour_bands_array);
+        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      } else if (e.name == 'SOAs') {
+        var new_labels = colour_bands_soas.map(get_legend_label_from_colour_bands_array);
+        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      } else if (e.name == 'Postcodes - All') {
+        var new_labels = colour_bands_glmmethod.map(get_legend_label_from_colour_bands_array);
+        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      }
+    });
+
+    // Data table and read in other csvs
+    $(document).ready(function() {
+
+      //TODO combine with the other read of this file
+      $.ajax({
+        url: './static/ppsqm_nge10_glmmethod_smoothed_alpha3000.csv',
+        dataType: 'text',
+        success: function(data) {
+          let parsed_data = Papa.parse(data, 
+            {header: true, dynamicTyping: true}
+            ).data.slice(0,-1);
+          
+
+          $('#postcodes-all-table').DataTable( {
+            responsive: true,
+            data: parsed_data,
+            columns: [
+                { data: "Postcode", 
+                  render: function(data) {return '<b>'+data+'</b>'},
+                  responsivePriority: 1, searchable: true},
+                { data: "SOA_LABEL", title: "Area (SOA)",
+                  responsivePriority: 3, searchable: true},
+                { data: "ppsqm_delta", 
+                  title: "Price per sq. m<br/>compared to average",
+                  render: DataTable.render.number(',', '.', 0, '£', null),
+                  responsivePriority: 2,
+                  searchable: false },
+                { data: "mean_val",
+                  title: "Mean actual price",
+                  render: DataTable.render.number(',', '.', 0, '£', null),
+                  responsivePriority: 4,
+                  searchable: false },
+                { data: "mean_size", title: "Mean size",
+                  render: DataTable.render.number(',', '.', 0, null, ' sq. m'),
+                  responsivePriority: 5,
+                  searchable: false },
+                { data: "longitude", responsivePriority: 6, 
+                  title: 'Longitude', searchable: false},
+                { data: "latitude", responsivePriority: 7, 
+                  title: 'Latitude', searchable: false},
+            ],
+            ordering: true,
+            searching: true,
+            //https://datatables.net/forums/discussion/46736/search-for-data-table-is-very-slow
+            //https://datatables.net/reference/option/searchDelay
+            //searchDelay: 800
+            search: {
+              return: true,
+              smart: false,
+              regex: false
+            },
+          } );
+        }
+      });
+
+      Papa.parse('./static/postcodeshort_nearest_five.csv', {
+        header: true,
+        download: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          pns_short = results.data.slice(0,-1);
+        }
+      });
+      
+      Papa.parse('./static/postcodelongtoshort_nearest_five.csv', {
+        header: true,
+        download: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          pns_long = results.data.slice(0,-1);
+        }
+      });
+
+      Papa.parse('./static/calculator_coefs_smoothed_alpha3000.csv', {
+        header: true,
+        download: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          calculator_coefs = results.data.slice(0,-1);
+        }
+      });
+
+      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod.csv', {
+        header: true, download: true, dynamicTyping: true,
+        complete: function(results) {
+          colour_bands_glmmethod = results.data.slice(0,-1).reverse();
+          
+          legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'info legend')
+            var labels = colour_bands_glmmethod.map(get_legend_label_from_colour_bands_array);
+            div.innerHTML = labels.join('<br>');
+            return div;
+          };
+          legend.addTo(map);
+        }
+      });
+
+      //load other colour band files
+      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod_houses.csv', {
+        header: true, download: true, dynamicTyping: true,
+        complete: function(results) {
+          colour_bands_houses = results.data.slice(0,-1).reverse();
+        }
+      });
+      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod_flats.csv', {
+        header: true, download: true, dynamicTyping: true,
+        complete: function(results) {
+          colour_bands_flats = results.data.slice(0,-1).reverse();
+        }
+      });
+      //TODO change to glm method
+      Papa.parse('./static/colour_bands_ppsqm_nge10_LSOAglmmethod.csv', {
+        header: true, download: true, dynamicTyping: true,
+        complete: function(results) {
+          colour_bands_soas = results.data.slice(0,-1).reverse();
+        }
+      });
+
+    });
+
+
+    //Postcode autocomplete
+    // $('#calc_postcode').autocomplete({
+    //   source: function(term, suggest) {
+    //     term = term.term.toLowerCase();
+    //     var postcodes_short = pns_short.map(function(x) { return x.postcode; });
+    //     var postcodes_long = pns_long.map(function(x) { return x.postcode; });
+    //     var choices = postcodes_short.concat(postcodes_long);
+    //     var matches = [];
+    //     for (i=0; i<choices.length; i++)
+    //       if (~choices[i].toLowerCase().indexOf(term)) matches.push(choices[i]);
+    //     suggest(matches);
+    //   },
+    //   delay: 300,
+    //   minLength: 3
+    // });
+
+  </script>
+
+</body>
+</html>

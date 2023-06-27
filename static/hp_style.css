@@ -51,3 +51,48 @@ a:hover, a:focus {
     margin-right: 8px;
     opacity: 0.7;
 }
+
+.modal-plot {
+    width: 92%;
+    margin: 20px 20px;
+    padding-bottom: 30px;
+    padding-top: 10px;
+}
+#myModal h1 {
+    text-align: left;
+}
+#myModal p {
+    text-align: left;
+}
+#myModal {
+    --bs-modal-padding: 3rem;
+}
+
+.afford_calc_box {
+    background-color: #ffdfbf;
+}
+.postcode_table_box {
+    background-color: #d2e4f0;
+}
+
+.btn-info, .btn-info:hover, .btn-info:active, .btn-info:visited {
+    background-color: #b2df8a;
+    border-color: #b2df8a;
+    --bs-btn-active-bg: #b2df8a;
+}
+.btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
+    background-color: #1f78b4;
+    border-color: #1f78b4;
+    --bs-btn-active-bg: #1f78b4;
+}
+.form-check-input:checked {
+    background-color: #fb9a99;
+    border-color: #fb9a99;
+}
+.active > .page-link, .page-link.active {
+    background-color: #1f78b4;
+    border-color: #1f78b4;
+}
+.page-link {
+    color: #1f78b4;
+}
