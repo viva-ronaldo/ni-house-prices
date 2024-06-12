@@ -91,9 +91,9 @@
           
           <p>The map shows the estimated <b>value added to a property, per square metre, by each postcode</b> in Northern Ireland.</p> 
 
-          <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas. Prices are from September 2022. Some postcodes are not present in the data due to an insufficient number of properties found in the Land & Property Service (LPS) data (see <b>How it works</b>).</p>
+          <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas. Prices are from <b>March 2024</b>. Some postcodes are not present in the data due to an insufficient number of properties found in the Land & Property Service (LPS) data (see <b>How it works</b>).</p>
 
-          <p>The map data can be viewed by individual postcode, or with postcodes grouped together by government Super Output Areas (SOAs) <span class='help-tooltip' title='A NISRA geography that divides Northern Ireland into 890 areas of approximately equal population' data-toggle="tooltip"><i class="fas fa-question-circle fa-sm"></i></span>. Data can be filtered to show only houses or only flats/apartments, and searched by postcode.</p>                    <!--https://www.opendatani.gov.uk/blog/data-aggregation-levels-of-geography-in-ni-->          
+          <p>The map data can be viewed by individual postcode, or with postcodes grouped together by government Super Output Areas (SOAs) <span class='help-tooltip' title='A NISRA geography that divides Northern Ireland into 890 areas of approximately equal population' data-bs-toggle="tooltip"><i class="fas fa-question-circle fa-sm"></i></span>. Data can be filtered to show only houses or only flats/apartments, and searched by postcode.</p>                    <!--https://www.opendatani.gov.uk/blog/data-aggregation-levels-of-geography-in-ni-->          
         </div>
       </div>
     </div>
@@ -130,7 +130,7 @@
                               
                     <h1>Data and modelling</h1>
 
-                    <p>Property data, including 2005 valuations, are from <a href='https://www.finance-ni.gov.uk/topics/property-valuation/domestic-valuation' target='_blank'>Land & Property Services.</a> These values are updated to 2022 using <a href='https://www.finance-ni.gov.uk/articles/northern-ireland-house-price-index' target='_blank'>NISRA's Northern Ireland House Price Index</a>, using separate factors for houses and flats/apartments, but only at the granularity of local government district (LGD) level. Price levels and the high-level structure of the map are therefore representative of 2022, but small-scale patterns shown are from 2005, and may have changed slightly since then, where some areas within an LGD have become relatively more desirable than others.</p>
+                    <p>Property data, including 2005 valuations, are from <a href='https://www.finance-ni.gov.uk/topics/property-valuation/domestic-valuation' target='_blank'>Land & Property Services.</a> These values are updated to June 2023 using <a href='https://www.finance-ni.gov.uk/articles/northern-ireland-house-price-index' target='_blank'>NISRA's Northern Ireland House Price Index</a>, using separate factors for houses and flats/apartments, but only at the granularity of local government district (LGD) level. Price levels and the high-level structure of the map are therefore representative of 2023, but small-scale patterns shown are from 2005, and may have changed slightly since then, where some areas within an LGD have become relatively more desirable than others.</p>
                               
                     <p>Values for each postcode come from a simple statistical model of <b>price per square metre</b>, trained on the LPS data:</p>
 
@@ -140,9 +140,11 @@
 
                     <p>These postcode coefficients are what is shown in the map. These terms capture <b>the value of the area itself</b>, independent of the particular kinds of properties (size, etc.) that are found in the area.</p>
 
+                    <p>The processing and modelling code is available <a href="https://github.com/viva-ronaldo/ni-house-prices/">on GitHub</a>.</p>
+
                     <h1>Validation</h1>
                     
-                    <p>The primary purpose of the map is to show the value of areas relative to each other, but for the affordability calculator to be useful, the price model must be accurately calibrated for 2022 asking prices. A sample of <b>sales listings</b> was obtained from three NI property agent websites in January 2023 and used to evaluate the model predictions. Property type, presence of garden, etc., and floor area were scraped from the listings, and model performance is reliant on the accuracy of this information.</p>
+                    <p>The primary purpose of the map is to show the value of areas relative to each other, but for the affordability calculator to be useful, the price model must be accurately calibrated for recent asking prices. A sample of <b>sales listings</b> was obtained from three NI property agent websites in January 2023 and used to evaluate the model predictions (from September 2022). Property type, presence of garden, etc., and floor area were scraped from the listings, and model performance is reliant on the accuracy of this information.</p>
 
                     <p>The first plot shows listed against predicted price per square metre, for 205 listed properties, excluding new builds, averaged to postcode (most postcodes have only a single property in the January 2023 selection). Predictions are evenly spread across the 1:1 line, indicating that predicted prices are well-calibrated (not consistently too high or too low). The Spearman rank correlation coefficient <i>r</i>, which measures the accuracy of the ordering of postcodes by price per square metre, is <b>0.53</b>, indicating low to moderate predictive skill; a more complex model would be required to increase this measure.</p>
 
@@ -152,7 +154,7 @@
 
                     <img src='static/nihousepricemap_validation_plot_2.png' class='modal-plot' style='width: 85%'>
 
-                    <p>The aim here is not to create the most accurate price model possible; this would require obtaining many more property characteristics, such as number of bedrooms, quality of fittings, and so on. The affordability calculator only indicates the price of a typical property of a given size in each postcode. The plots above show, however, that the price model performs reasonably well at separating postcodes by property value, and is well calibrated for 2022 prices.</p>
+                    <p>The aim here is not to create the most accurate price model possible; this would require obtaining many more property characteristics, such as number of bedrooms, quality of fittings, and so on. The affordability calculator only indicates the price of a typical property of a given size in each postcode. The plots above show, however, that the price model performs reasonably well at separating postcodes by property value, and is well calibrated for 2022/2023 prices.</p>
                   </div>
 
                 </div>
@@ -171,15 +173,15 @@
             <div class="col py-4 px-4 d-flex flex-column position-static afford_calc_box">
               <h2>Affordability calculator</h2>
 
-              <p>Enter details of a hypothetical property and a postcode (either half or full), and the calculator returns the typical expected 2022 price for that property, based on the price per square metre model. This is only a rough indication, and cannot account for the unique features of a particular listed property, but can be used to estimate what combinations of location and property characteristics are affordable on your budget.</p>
+              <p>Enter details of a hypothetical property and a postcode (either half or full), and the calculator returns the typical expected 2024 price for that property, based on the price per square metre model. This is only a rough indication, and cannot account for the unique features of a particular listed property, but can be used to estimate what combinations of location and property characteristics are affordable on your budget.</p>
               
               <form class='row mx-2 my-2 needs-validation' id='calc_form' onsubmit='return run_calculator()'>
 
                 <div class='row mb-2'>
-                  <div class='col-4'>
+                  <div class='col-lg-4 col-sm-6'>
                     <p>I'm looking for a...</p>
                   </div>
-                  <div class='col-6'>
+                  <div class='col-lg-4 col-sm-6'>
                     <input type="radio" class="form-check-input" id="calc_hometype_h" name='calc_hometype' aria-describedby='calc_hometype_help' checked onchange="showGarageGarden()">
                     <label for="calc_hometype_h" class="form-label">House</label>
                     <input type="radio" class="form-check-input px-2" id="calc_hometype_f" name='calc_hometype' aria-describedby='calc_hometype_help' onchange="hideGarageGarden()">
@@ -189,10 +191,10 @@
 
                 <div class='row d-flex align-items-end'>
                   <div class="col-6">
-                    <label for='calc_size' class='form-label mx-2'>...with floor size (including garage):</label>
+                    <label for='calc_size' class='form-label mx-2'>...with floor size (including garage) <span class='help-tooltip' title="<ul><li>Total floor area should include garage and any outbuildings, but exclude garden</li><li>Compared to room-by-room area listings on property websites, it is generally best to err on the high side when estimating the total area</li><li>Specific property areas can be found on <a href='https://apps.spatialni.gov.uk/LPSDomesticValuation/index.html' target='_blank'>the LPS Domestic Property Valuation tool</a></li></ul>" data-bs-container='body' data-bs-toggle="tooltip" data-bs-html="true" data-bs-delay=800><i class="fas fa-question-circle fa-sm"></i></span>:</label>
                   </div>
                   <div class="col-6">
-                    <label for="calc_postcode" class="form-label mx-2">...in postcode (full or half):</label>
+                    <label for="calc_postcode" class="form-label mx-2">...in postcode <span class='help-tooltip' title="Postcode format can be either  full ('BT1 3EW') or half ('BT1')" data-bs-toggle="tooltip" data-bs-html="true"><i class="fas fa-question-circle fa-sm"></i></span>:</label>
                   </div>
                 </div>
                 <div class='row mb-2'>
@@ -244,6 +246,10 @@
               <p id='calc_output'></p>
 
               <p id='calc_output_2'></p>
+
+              <div>
+                <canvas id="calculator_output_chart" style='display: none' height='200px'></canvas>
+              </div>
             </div>
           </div>
 
@@ -286,7 +292,7 @@
       <div class="container-fluid">
         <div class='row justify-content-end' style='font-size: 0.7em'>
           <div class='col-12 text-end'>
-            <p>© 2023 David Mulholland. Favicon made by <a href="https://www.flaticon.com/free-icons/home" title="home icons">Vectors Market - Flaticon</a></p> 
+            <p>© 2024 David Mulholland. Favicon made by <a href="https://www.flaticon.com/free-icons/home" title="home icons">Vectors Market - Flaticon</a></p> 
           </div>
         </div>
       </div>
@@ -319,12 +325,14 @@
   <!--Search bar (modified to work with Circles-->
   <script src="/static/leaflet-search/leaflet-search.src.js"></script>
 
+  <!--Values by postcode chart-->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <script type="text/javascript">
 
-    //TODO something to fix this
-    // $(function () {
-    //   $('[data-toggle="tooltip"]').tooltip()
-    // });
+    $(document).ready(function () {
+      $('[data-bs-toggle="tooltip"]').tooltip()
+    });
 
     function showGarageGarden() {
       document.getElementById("garage_col").style.display="block";
@@ -442,7 +450,7 @@
       var markers = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
-        disableClusteringAtZoom: 13,
+        disableClusteringAtZoom: 15,
         spiderfyOnMaxZoom: false,
         maxClusterRadius: 10,  //TODO replace with function(zoomlevel)
         removeOutsideVisibleBounds: true,
@@ -627,7 +635,7 @@
     map.attributionControl.setPrefix('');
 
     let pns_short, pns_long;
-    let calculator_coefs;
+    let calculator_coefs_houses, calculator_coefs_flats;
     let colour_bands_flats, colour_bands_houses, colour_bands_soas;
 
     function run_calculator() {
@@ -650,15 +658,25 @@
       });
 
       let coefs = new Map();
-      let coefs_pc10 = new Map();
-      let coefs_pc90 = new Map();
-      $.each(calculator_coefs, function(i, field) {
-        coefs.set(field.coef, parseFloat(field.value_mean.toFixed(2)));
-        if (field.value_pc10 !== null) {
-          coefs_pc10.set(field.coef, parseFloat(field.value_pc10.toFixed(2)));
-          coefs_pc90.set(field.coef, parseFloat(field.value_pc90.toFixed(2)));
-        }
-      });
+      let coefs_lower = new Map();
+      let coefs_upper = new Map();
+      if (form_map.get('calc_hometype_House')) {
+        $.each(calculator_coefs_houses, function(i, field) {
+          coefs.set(field.coef, parseFloat(field.value_mean.toFixed(4)));
+          if (field.value_lower !== null) {
+            coefs_lower.set(field.coef, parseFloat(field.value_lower.toFixed(2)));
+            coefs_upper.set(field.coef, parseFloat(field.value_upper.toFixed(2)));
+          }
+        });
+      } else {
+        $.each(calculator_coefs_flats, function(i, field) {
+          coefs.set(field.coef, parseFloat(field.value_mean.toFixed(4)));
+          if (field.value_lower !== null) {
+            coefs_lower.set(field.coef, parseFloat(field.value_lower.toFixed(2)));
+            coefs_upper.set(field.coef, parseFloat(field.value_upper.toFixed(2)));
+          }
+        });
+      }
 
       if (coefs.has(form_map.get('calc_postcode').trim().toUpperCase())) {
         let postcode_choice = form_map.get('calc_postcode').trim().toUpperCase();
@@ -671,10 +689,8 @@
 
         //radio button house/flat appears only as the one selected with value 'on'
         if (form_map.get('calc_hometype_House')) {
-          pred_ppsqm += coefs.get('home_type_House');
           price_string += "<b>house</b> "
         } else {
-          pred_ppsqm += coefs.get('home_type_Flat');
           price_string += "<b>flat</b> "
         }
 
@@ -692,38 +708,46 @@
           }
         }
 
+        pred_ppsqm += coefs.get('area_m2') * parseInt(form_map.get('calc_size'));
+        pred_ppsqm += coefs.get('area_squared') * parseInt(form_map.get('calc_size'))**2;
+        if (parseInt(form_map.get('calc_size')) < 60) {
+          pred_ppsqm += coefs.get('area_lt_60_01');
+        }
+        // This is the base; different postcode terms can be added to this below.
+
         pred_ppsqm_mean = pred_ppsqm + coefs.get(postcode_choice);
-        pred_ppsqm_pc10 = pred_ppsqm + coefs_pc10.get(postcode_choice);
-        pred_ppsqm_pc90 = pred_ppsqm + coefs_pc90.get(postcode_choice);
+        pred_ppsqm_lower = pred_ppsqm + coefs_lower.get(postcode_choice);
+        pred_ppsqm_upper = pred_ppsqm + coefs_upper.get(postcode_choice);
         price_string += "in <b>" + postcode_choice + "</b>, is "
 
         //*1.4 for new build
         if (form_map.get('calc_newbuild_yn') == 'Yes') {
           pred_ppsqm_mean *= 1.4;
-          pred_ppsqm_pc10 *= 1.4;
-          pred_ppsqm_pc90 *= 1.4;
+          pred_ppsqm_lower *= 1.4;
+          pred_ppsqm_upper *= 1.4;
           // If only a short postcode is provided, move the mean
-          //    prediction to the 70th percentile for the short postcode
+          //   prediction to the 70th percentile for the short postcode,
+          //   assuming the new build will be in an above-average part of it.
           if (postcode_choice.length <= 4) {
-            pred_ppsqm_mean = pred_ppsqm_pc10 + 0.75*(pred_ppsqm_pc90-pred_ppsqm_pc10)
+            pred_ppsqm_mean = pred_ppsqm_lower + 0.75*(pred_ppsqm_upper-pred_ppsqm_lower)
           }
         }
 
         //This is price per sq metre; now scale to area
         pred_price_mean = 1000*(parseInt(pred_ppsqm_mean) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
-        pred_price_pc10 = 1000*(parseInt(pred_ppsqm_pc10) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
-        pred_price_pc90 = 1000*(parseInt(pred_ppsqm_pc90) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+        pred_price_lower = 1000*(parseInt(pred_ppsqm_lower) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+        pred_price_upper = 1000*(parseInt(pred_ppsqm_upper) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
 
         price_string += ` <span style='font-size: 1.8em; color: dodgerblue'><b>£${pred_price_mean.toLocaleString()}</b></span>`
-        if (postcode_choice.length <= 4) 
-          price_string += ` (<b>£${pred_price_pc10.toLocaleString()}&ndash;${pred_price_pc90.toLocaleString()}</b>)`
+        //if (postcode_choice.length <= 4) 
+        price_string += ` (<b>£${pred_price_lower.toLocaleString()}&ndash;${pred_price_upper.toLocaleString()}</b>)`
         $('#calc_output').html(price_string);
 
         let nearest_postcodes = pns_short.concat(pns_long).filter(
           function(value) { 
             return value.postcode==postcode_choice
           })[0];
-        let comparison_string = "The same property <ul>"
+        let comparison_string = "The same property would cost, on average,<ul>"
 
         var npc_hits = 0;
         for (i = 1; i <= 5; i++) {
@@ -732,23 +756,23 @@
           if (coefs.get(near_pc) !== undefined) {
             npc_hits += 1;
             near_pc_pred_ppsqm_mean = pred_ppsqm + coefs.get(near_pc);
-            near_pc_pred_ppsqm_pc10 = pred_ppsqm + coefs_pc10.get(near_pc);
-            near_pc_pred_ppsqm_pc90 = pred_ppsqm + coefs_pc90.get(near_pc);
+            near_pc_pred_ppsqm_lower = pred_ppsqm + coefs_lower.get(near_pc);
+            near_pc_pred_ppsqm_upper = pred_ppsqm + coefs_upper.get(near_pc);
 
             //*1.4 for new build
             if (form_map.get('calc_newbuild_yn') == 'Yes') {
               near_pc_pred_ppsqm_mean *= 1.4;
-              near_pc_pred_ppsqm_pc10 *= 1.4;
-              near_pc_pred_ppsqm_pc90 *= 1.4;
+              near_pc_pred_ppsqm_lower *= 1.4;
+              near_pc_pred_ppsqm_upper *= 1.4;
               //and mean to 70th percentile for these short postcodes
-              near_pc_pred_ppsqm_mean = near_pc_pred_ppsqm_pc10 + 0.75*(near_pc_pred_ppsqm_pc90-near_pc_pred_ppsqm_pc10)
+              near_pc_pred_ppsqm_mean = near_pc_pred_ppsqm_lower + 0.75*(near_pc_pred_ppsqm_upper-near_pc_pred_ppsqm_lower)
             }
 
             near_pc_pred_price_mean = 1000*(parseInt(near_pc_pred_ppsqm_mean) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
-            near_pc_pred_price_pc10 = 1000*(parseInt(near_pc_pred_ppsqm_pc10) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
-            near_pc_pred_price_pc90 = 1000*(parseInt(near_pc_pred_ppsqm_pc90) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_lower = 1000*(parseInt(near_pc_pred_ppsqm_lower) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_upper = 1000*(parseInt(near_pc_pred_ppsqm_upper) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
 
-            comparison_string += `<li>in ${near_pc} would cost, on average, <b>£${near_pc_pred_price_mean.toLocaleString()}</b> (£${near_pc_pred_price_pc10.toLocaleString()}&ndash;${near_pc_pred_price_pc90.toLocaleString()}) `
+            comparison_string += `<li>in ${near_pc}, <b>£${near_pc_pred_price_mean.toLocaleString()}</b> (£${near_pc_pred_price_lower.toLocaleString()}&ndash;${near_pc_pred_price_upper.toLocaleString()}) `
             if (near_pc_pred_price_mean > pred_price_mean + 1000) {
               comparison_string += "<span style='color: red; font-weight: bold; font-size: 1.2em'>&nearr;</span>"
             } else if (near_pc_pred_price_mean < pred_price_mean - 1000) {
@@ -761,6 +785,123 @@
         comparison_string += '</ul>'
 
         $('#calc_output_2').html(comparison_string);
+
+        // do the same for all postcodes
+        const all_short_postcodes = Array.from(coefs.keys()).filter(key => key.startsWith('BT')).filter(key => key.length <= 4);
+        // if we are doing a long postcode, add it to this list
+        if (postcode_choice.length > 4) {
+          all_short_postcodes.push(postcode_choice);
+        }
+        let allpc_values = new Array(all_short_postcodes.length);
+        for (i = 1; i <= all_short_postcodes.length; i++) {
+          var near_pc = all_short_postcodes[i-1];
+          
+          if (coefs.get(near_pc) !== undefined) {
+            near_pc_pred_ppsqm_mean = pred_ppsqm + coefs.get(near_pc);
+            near_pc_pred_ppsqm_lower = pred_ppsqm + coefs_lower.get(near_pc);
+            near_pc_pred_ppsqm_upper = pred_ppsqm + coefs_upper.get(near_pc);
+
+            //*1.4 for new build
+            if (form_map.get('calc_newbuild_yn') == 'Yes') {
+              near_pc_pred_ppsqm_mean *= 1.4;
+              near_pc_pred_ppsqm_lower *= 1.4;
+              near_pc_pred_ppsqm_upper *= 1.4;
+              //and mean to 70th percentile for these short postcodes
+              near_pc_pred_ppsqm_mean = near_pc_pred_ppsqm_lower + 0.75*(near_pc_pred_ppsqm_upper-near_pc_pred_ppsqm_lower)
+            }
+
+            near_pc_pred_price_mean = 1000*(parseInt(near_pc_pred_ppsqm_mean) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_lower = 1000*(parseInt(near_pc_pred_ppsqm_lower) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            near_pc_pred_price_upper = 1000*(parseInt(near_pc_pred_ppsqm_upper) * parseInt(form_map.get('calc_size')) / 1000).toFixed(0);
+            allpc_values[i-1] = {
+              postcode: near_pc,
+              lower: near_pc_pred_price_lower,
+              mean: near_pc_pred_price_mean,
+              upper: near_pc_pred_price_upper
+            };
+          }
+        }
+
+        let allpc_values_sorted_by_value = allpc_values.sort(function(a, b) {return a.mean - b.mean});
+        
+        const ctx = document.getElementById('calculator_output_chart').getContext('2d');
+        if (typeof(myChart) !== 'undefined') {
+          myChart.clear();
+          myChart.destroy();
+        } else {
+          document.getElementById('calculator_output_chart').style.display = 'block';
+        }
+
+        // Javascript chart showing the value pred_price_mean against
+        // other postcode values. A scatter plot with value on the x-axis
+        // and postcodes on the y-axis. Reference postcodes are near_pc_pred_price_mean from above.
+        // The user's postcode is shown in red.
+        myChart = new Chart(ctx, {
+          data: {
+            labels: allpc_values_sorted_by_value.map(arr => arr.postcode).filter((postcode, index) => index % 3 === 0 || index === allpc_values_sorted_by_value.length - 1 || postcode === postcode_choice),
+            datasets: [
+              {
+                data: allpc_values_sorted_by_value.filter((arr, index) => index % 3 === 0 || index === allpc_values_sorted_by_value.length - 1 || arr.postcode === postcode_choice).map(arr => [arr.lower, arr.upper]),
+                type: 'bar',
+                backgroundColor: "silver",
+                borderWidth: 0,
+                barThickness: 5,
+                order: 1,
+              },
+              {
+                data: [{x: pred_price_mean, y: postcode_choice}],
+                type: 'scatter',
+                backgroundColor: 'brown',
+                pointRadius: 8,
+                order: 0,
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            scales: {
+              x: {
+                type: 'linear',
+                position: 'bottom',
+                min: Math.round((Math.min(...allpc_values_sorted_by_value.map(arr => arr.lower))-20000)/50000) * 50000,
+                max: Math.round((Math.max(...allpc_values_sorted_by_value.map(arr => arr.upper))+20000)/50000) * 50000,
+                ticks: {
+                  callback: function(value, index, ticks) {
+                    return '£' + value.toLocaleString();
+                  },
+                },
+              },
+              y: {
+                type: 'category',
+                position: 'left',
+              }
+            },
+            //remove legend
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  title: function(context) { 
+                    if (context[0].dataset.type == 'scatter') {
+                      return context[0].raw.y;
+                    } else {
+                      return context[0].label;
+                    }
+                  },
+                  label: function(context) {
+                    if (context.dataset.type == 'scatter') {
+                      return '£' + context.raw.x.toLocaleString();
+                    } else {
+                      return '£' + context.raw[0].toLocaleString() + '-' + context.raw[1].toLocaleString();
+                    }
+                  }
+                }
+              },
+            }
+          }
+        })
 
       } else {
         $('#calc_output').html('Postcode not found');
@@ -872,12 +1013,20 @@
         }
       });
 
-      Papa.parse('./static/calculator_coefs_smoothed_alpha3000.csv', {
+      Papa.parse('./static/calculator_coefs_houses_smoothed_alpha3000.csv', {
         header: true,
         download: true,
         dynamicTyping: true,
         complete: function(results) {
-          calculator_coefs = results.data.slice(0,-1);
+          calculator_coefs_houses = results.data.slice(0,-1);
+        }
+      });
+      Papa.parse('./static/calculator_coefs_flats_smoothed_alpha3000.csv', {
+        header: true,
+        download: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          calculator_coefs_flats = results.data.slice(0,-1);
         }
       });
 
@@ -909,7 +1058,6 @@
           colour_bands_flats = results.data.slice(0,-1).reverse();
         }
       });
-      //TODO change to glm method
       Papa.parse('./static/colour_bands_ppsqm_nge10_LSOAglmmethod.csv', {
         header: true, download: true, dynamicTyping: true,
         complete: function(results) {

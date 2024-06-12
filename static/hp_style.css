@@ -28,7 +28,7 @@ a:hover, a:focus {
     color: chocolate;
 }
 .tooltip > .tooltip-inner {
-    background-color: blue;
+    background-color: #d2e4f0;
     color: black; 
     border: 1px solid black; 
     font-size: 1.1em;

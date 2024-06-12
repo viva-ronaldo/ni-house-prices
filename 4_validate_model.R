@@ -18,6 +18,10 @@ coefs <- read.csv('static/calculator_coefs_smoothed_alpha3000.csv')
 coefs_postcodes <- subset(coefs, grepl('BT',coef))
 coefs <- subset(coefs, !grepl('BT', coef))
 
+lps_vals_2024 <- read.csv('/media/shared_storage/data/ni-house-prices_data/other_data/processed_LPS_valuations.csv')
+
+# BELOW ASSUMES THE OLD COEFS FORMAT
+
 #HG 48 glenholm crescent scraped area 140 should be 100 incl garage; misprint on one room; REMOVED
 #HG 18 balmoral lane scraped 63 should probably be ~80
 #HG 29 pond park road scraped 91 should be 91+hall+2 bathrooms, though still will be very underestimated
@@ -249,3 +253,82 @@ pred_prices %>%
     theme(legend.position=c(0.77,0.22),
           plot.subtitle = element_text(size=8))
 ggsave('static/nihousepricemap_validation_plot_2.png', width=8, height=5)
+
+
+# 1/6/24
+# NOW USING NEW MODEL INCLUDING AREA TERMS
+
+# I know that scaling LPS 2005 prices to 2024 x1.62 is correct - this covers non-new-builds
+
+# Now check that the calculator reproduces the value_2022s without bias
+lps_vals_2024 %>%
+    inner_join(coefs_postcodes %>% select(Postcode=coef, postcode_coef=value_mean),
+               by='Postcode') %>% 
+    mutate(area_squared = area_m2**2,
+           area_lt_60_01 = ifelse(area_m2 < 60, 1, 0)) %>%
+    mutate(pred_value = ifelse(home_type=='Flat',
+                               subset(coefs, coef=='home_type[Flat]')$value_mean +
+                                   subset(coefs, coef=='home_type[Flat]:area_m2')$value_mean * area_m2 +
+                                   subset(coefs, coef=='home_type[Flat]:area_squared')$value_mean * area_squared +
+                                   subset(coefs, coef=='home_type[Flat]:area_lt_60_01')$value_mean * area_lt_60_01,
+                               subset(coefs, coef=='home_type[House]')$value_mean +
+                                   subset(coefs, coef=='home_type[House]:area_m2')$value_mean * area_m2 +
+                                   subset(coefs, coef=='home_type[House]:area_squared')$value_mean * area_squared +
+                                   subset(coefs, coef=='home_type[House]:area_lt_60_01')$value_mean * area_lt_60_01)
+           + subset(coefs, coef=='has_garage_01')$value_mean * has_garage_01 +
+               subset(coefs, coef=='has_garden_01')$value_mean * has_garden_01 +
+               subset(coefs, coef=='has_other_outbuilding_01')$value_mean * has_other_outbuilding_01 +
+               subset(coefs, coef=='has_yard_01')$value_mean * has_yard_01 +
+               postcode_coef) %>%
+    mutate(area_quintile = ntile(area_m2, 5)) %>% 
+    group_by(area_quintile) %>% summarise(n=n(),
+                                          mean_area_m2 = mean(area_m2),
+                                          max_area_m2 = max(area_m2),
+                                          mean_actual=mean(price_per_sq_m_2022_by_lgd),
+                                          mean_pred=mean(pred_value),
+                                          .groups='drop') %>% 
+    mutate(residual = mean_actual - mean_pred,
+           residual_value = residual*mean_area_m2)
+
+# Underpredicts for low area (< ~100 m2) and overpredicts for high area (>150)
+# This is expected, as value doesn't drop to zero as area goes towards 0, and value must saturate at some large area.
+# Could correct for this, though it's only a £4500 underprediction for small areas.
+# -> corrected model with area, area^2 and area_lt_60 terms, interacting with home_type;
+#    now all quintiles are slightly (~1%) under but the pattern is mostly gone
+#    Houses are slightly low, flats slightly high.
+
+
+# Look at linearity vs area - might be compromising the 100-300k range and getting higher values good?
+lps_vals_2024 %>% group_by(area_grp = ntile(area_m2, 20)) %>% mutate(mean_area = mean(area_m2)) %>% ungroup() %>%
+    ggplot() + geom_boxplot(aes(mean_area, value_2022_by_lgd, group=mean_area),
+                            outlier.size=0.3, outlier.alpha=0.5) +
+    geom_smooth(aes(mean_area, value_2022_by_lgd), se=FALSE, method='lm', colour='coral') +
+    facet_wrap(~home_type) +
+    ylim(0, 8e5) +
+    theme_light()
+# Value is quite linear with area but is a bit sub-linear at the high end,
+#   even though in this view, the biggest area bins probably also contain the best postcodes,
+#   so we would expect higher than linear values.
+
+lps_vals_2024 %>% 
+    filter(area_m2 <= 200) %>% 
+    inner_join(coefs_postcodes %>% select(Postcode=coef, postcode_coef=value_mean),
+               by='Postcode') %>% 
+    group_by(area_grp = ntile(area_m2, 20)) %>% mutate(mean_area = mean(area_m2)) %>% ungroup() %>%
+    mutate(price_minus_postcode = price_per_sq_m_2022_by_lgd - postcode_coef) %>%
+    ggplot() + geom_boxplot(aes(mean_area, price_minus_postcode, group=mean_area),
+                            outlier.size=0.3, outlier.alpha=0.5) +
+    geom_smooth(aes(mean_area, price_minus_postcode), se=FALSE, method='lm', colour='coral') +
+    facet_wrap(~home_type) +
+    ylim(0, 3500) +
+    theme_light()
+# Remove the postcode component (may introduce some distortion as coefs were linear fits) and look at ppsqm.
+# Sub-linear at high area is clearer now
+# The range in ppsqm is ~1520 to 1650, so by using this target without area as a feature,
+#   predictions for small area values may be ~60ppsqm*100m2 = £6k low, and high areas ~60*250m2 = £15k high.
+# Now appears in both Houses and Flats but with different slopes
+# We see
+# - Particularly above linear for houses at 50-60m2; i.e. a 50m2 house is worth more than half a 100m2 house (maybe 1.2x half)
+# - There is a big sublinear trend for flats 40-100m2; i.e. a 100m2 flat is worth much less than twice a 50m2 flat
+#     (maybe 80% of twice, i.e. 1.6x); sublinear trend continues at higher areas but flattens.
+# So will need a model with interacting home_type and area terms, and extra term for <=60, and maybe <=100 flats.

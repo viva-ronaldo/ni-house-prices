@@ -28,7 +28,7 @@ library(ggrepel)
 
 #i) Relative moves of LGD prices ----
 
-lgd <- read.csv('other_data/standardised-price-and-index-by-lgd-q1-2005---q3-2022.csv')
+lgd <- read.csv('/media/shared_storage/data/ni-house-price_data/other_data/standardised-price-and-index-by-lgd-q1-2005---q3-2022.csv')
 
 tmp <- lgd %>% select(Quarter_Year, ends_with('Price')) %>% 
   pivot_longer(cols=ends_with('Price')) %>% 
@@ -67,7 +67,7 @@ inner_join(tmp %>% filter(Quarter_Year=='Q1 2005') %>% select(name, value_1=valu
 
 
 #ii) Changes in LGD housing stock ----
-stock <- read.csv('other_data/ni-housing-stock-by-lgd-2008---2022.csv', check.names = FALSE) %>%
+stock <- read.csv('/media/shared_storage/data/ni-house-price_data/other_data/ni-housing-stock-by-lgd-2008---2022.csv', check.names = FALSE) %>%
     filter(`District Council`!='') %>% 
     pivot_longer(cols=ends_with('Stock'), names_to='year')
 inner_join(stock %>% filter(year=='2008 Housing Stock') %>% select(`District Council`, value_1=value),
@@ -99,7 +99,7 @@ inner_join(stock %>% filter(year=='2008 Housing Stock') %>% select(`District Cou
 
 #iii) LPS valuation analysis ----
 
-lps_valuation_files <- Sys.glob('LPS_data/lps_valuations*csv')
+lps_valuation_files <- Sys.glob('/media/shared_storage/data/ni-house-price_data/LPS_data/lps_valuations*csv')
 
 lps_sample <- lapply(lps_valuation_files %>% sample(200, replace=FALSE), read.csv) %>% bind_rows()
 dim(lps_sample)

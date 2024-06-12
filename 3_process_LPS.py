@@ -1,21 +1,29 @@
+# conda activate netcdf
+# python 3_process_LPS.py
+
 #Method:
 #- Read all LPS 2005 price data; remove bad data, Mixed types, and some very large props
-#- Get Q1 2005 to Q2 2022 price changes (LPS values are from 1 Jan 2005)
+#- Get Q1 2005 to current quarter price changes (LPS values are from 1 Jan 2005)
 #  - First countrywide from NI House Price Index (ODNI); this gives 1.51 for 'residential'
 #    (could also use 1.26 for apartments, but can't use 1.62 detached, 1.56 semi-d, 1.43 terrace)
 #  - Second use by LGD, also from NIHPI (ODNI); this gives factors 1.41-1.60 for 11 areas
 #  - LGD scalings are used for 99% of cases; rest use nw
-#  - Now updated to Q3 2022: nw factors 1.57 overall and 1.28 flats
 #  - Nationwide HPI gives 2005-2022Q3 change as 1.67 (1.60 for Q4), so maybe should shift NIHPI up a bit (1.67/1.57 = 1.06)
 #  - ONS Northern Ireland prices gives 2005-2022Q3 changes as 1.57 - this seems to be the NIHPI
 #    They use a regression model on actual sales prices to normalise them https://www.gov.uk/government/publications/about-the-uk-house-price-index/quality-and-methodology#methods-used-to-produce-the-uk-hpi 
 #    e.g. Scotland values are 2.05 overall and 1.81 flats; Wales 1.77, 1.35
 #    so it is agreed that flats have risen by less (mostly diff in last two years)
+#  - Now updated to Q3 2022: nw factors 1.57 overall and 1.28 flats
+#  - Now updated to Q2 2023: nw factors 1.64 overall and 1.29 flats
+#  - Now updated to Q1 2024, including extra 2004Q4-2005Q1 factor: nw factors 1.66 overall and 1.35 flats
 #- Fit model for ppsqm_2022 with postcode, home type, yard, garage, garden, other outbuilding features
 #    (would like to have also house type breakdown and num bedrooms in particular); and another model by LSOA
 #- Lots of summarising data by postcode or LSOA to make output files
 
 #TODO add mean ppsqm for flat and house+garage+garden to website
+#TODO add size guide to calculator as hover tooltip
+#TODO change display of calculator prices; add graph?
+
 #TODO check postcode dropdown in calculator
 #TODO check worker true error in papa.parse for table
 
@@ -25,18 +33,35 @@ import re, glob, copy, random, time, gc
 import geopandas as gpd
 from matplotlib import colors, cm
 from statsmodels.api import GLM, add_constant
+import statsmodels.formula.api as smf
 import psutil
+
+recent_price_quarter = 'Q1 2024'
+house_price_data_dir = '/media/shared_storage/data/ni-house-prices_data'
+nihpi_nw_file = f"{house_price_data_dir}/other_data/ni-hpi-by-property-type-q1-2005---{recent_price_quarter.replace(' ','-').lower()}.csv"
+nihpi_lgd_file = f"{house_price_data_dir}/other_data/standardised-price-and-index-by-lgd-q1-2005---{recent_price_quarter.replace(' ','-').lower()}.csv"
 
 min_properties_per_postcode = 10
 min_property_area, max_property_area = 2, 800
 smoothing_alpha = 3000
 
-recent_price_quarter = 'Q3 2022'
-nihpi_nw_file = f"other_data/ni-hpi-by-property-type-q1-2005---{recent_price_quarter.replace(' ','-').lower()}.csv"
-nihpi_lgd_file = f"other_data/standardised-price-and-index-by-lgd-q1-2005---{recent_price_quarter.replace(' ','-').lower()}.csv"
+q42004_to_q12005_factor = 1.02
 
-test_files = glob.glob('LPS_data/lps_valuations_*_*.csv')
+# Read in data
+# HPI scaling factors
+price_changes_nw = pd.read_csv(nihpi_nw_file).set_index('Quarter_Year')
+price_changes_lgd = pd.read_csv(nihpi_lgd_file).set_index('Quarter_Year')
+# LGD geometries
+lgd_geom = gpd.read_file(f'{house_price_data_dir}/other_data/LAD_MAY_2022_UK_BSC_V3/').to_crs("EPSG:4326")   #convert from something to lat lon geometry
+# LSOA geometries
+soas = gpd.read_file(f'{house_price_data_dir}/other_data/soa2001_ODNI.json')\
+    .set_crs('EPSG:29902', allow_override=True)\
+    .to_crs('EPSG:4326')
+soas['SOA_LABEL'] = soas.SOA_LABEL.apply(lambda l: l.replace('_',' '))
 
+# --- Prepare houses data ---
+
+test_files = glob.glob(f'{house_price_data_dir}/LPS_data/lps_valuations_*_*.csv')
 houses = pd.concat([pd.read_csv(f) for f in test_files])
 print(f'Read {houses.shape[0]} rows')
 
@@ -60,7 +85,7 @@ houses = houses[~houses.desc.isin(['','outbuilding','hut','houses (huts) garden'
 print(f'{houses.shape[0]} after dropping empty or non-standard descs')
 
 #Add lon, lat from Doogal postcodes 
-postcodes = pd.read_csv('other_data/full_postcode_latlons_from_doogal.csv', 
+postcodes = pd.read_csv(f'{house_price_data_dir}/other_data/full_postcode_latlons_from_doogal.csv', 
     usecols=['Postcode','Latitude','Longitude','LSOA Code'])
 houses = houses.merge(postcodes, left_on='postcode', right_on='Postcode')
 
@@ -178,9 +203,9 @@ print(f"Dropping {(houses.home_type=='Other').sum()} cases not identified as Hou
 houses = houses[houses.home_type.isin(['House','Flat'])].copy()
 
 
-#Get price change factors from 2005 to 2022
+#Get price change factors from 2005 to current
 
-#ODNI API works though it is not obvious until I make an account
+# OR: ODNI API works though it is not obvious until I make an account
 # import requests
 # res = requests.get('https://admin.opendatani.gov.uk/api/3/action/datastore_search?resource_id=dc7af407-bcb5-4820-81c0-a5e0dd7cbcb9')
 # nihpi_df = pd.DataFrame(res.json()['result']['records'])
@@ -190,102 +215,106 @@ houses = houses[houses.home_type.isin(['House','Flat'])].copy()
 #         nihpi_df[c] = nihpi_df[c].astype(float)
 # nihpi_df = nihpi_df[['Quarter_Year'] + sorted([c for c in nihpi_df.columns if c != 'Quarter_Year'])]
 
-print(f'\nScaling prices from Q1 2005 to {recent_price_quarter}')
-#Nationwide
-price_change_nw = pd.read_csv(nihpi_nw_file).set_index('Quarter_Year')
-price_change_2005_2022_nw_apts = price_change_nw.loc[recent_price_quarter]['NI_Apartment_Price_Index'] / \
-    price_change_nw.loc['Q1 2005']['NI_Apartment_Price_Index']
-price_change_2005_2022_nw_all = price_change_nw.loc[recent_price_quarter]['NI_Residential_Property_Price_Index'] / \
-    price_change_nw.loc['Q1 2005']['NI_Residential_Property_Price_Index']
-#Assume that detached, semi-detached, terrace, and apartment each make up a quarter of the 'all' value; 
-#  adjust it to remove the apartment bit
-price_change_2005_2022_nw_houses = (4*price_change_2005_2022_nw_all - price_change_2005_2022_nw_apts)/3
-print(f'Countrywide NIHPI factors for house and apartment are {price_change_2005_2022_nw_houses:.2f} and {price_change_2005_2022_nw_apts:.2f}')
-houses['value_2022_by_nw'] = houses.apply(lambda row: 
-    row.value*price_change_2005_2022_nw_houses if row.home_type=='House' else row.value*price_change_2005_2022_nw_apts, axis=1)
-houses['price_per_sq_m_2022_by_nw'] = houses.value_2022_by_nw/houses.area_m2
+print(f'\nScaling prices from Q4 2004 to {recent_price_quarter}')
 
-#By LGD
-#TODO change to use different term for flats
-price_change_lgd = pd.read_csv(nihpi_lgd_file).set_index('Quarter_Year')
-price_changes_2005_2022_lgd = price_change_lgd.loc[recent_price_quarter] / price_change_lgd.loc['Q1 2005']
-price_changes_2005_2022_lgd = price_changes_2005_2022_lgd.loc[[c for c in price_changes_2005_2022_lgd.index if '_HPI' in c]]
-price_changes_2005_2022_lgd.index = [c[:-4].replace('_',' ').replace('Armagh City','Armagh City,')\
-    .replace('Newry','Newry,') for c in price_changes_2005_2022_lgd.index]
-price_changes_2005_2022_lgd.index.name = 'LGD'
-print('NIHPI factors by LGD are:\n', price_changes_2005_2022_lgd)
-lgd_geom = gpd.read_file('other_data/LAD_MAY_2022_UK_BSC_V3/').to_crs("EPSG:4326")   #convert from something to lat lon geometry
+# Nationwide
+price_change_2005_to_current_nw_apts = price_changes_nw.loc[recent_price_quarter]['NI_Apartment_Price_Index'] / \
+    (price_changes_nw.loc['Q1 2005']['NI_Apartment_Price_Index'] / q42004_to_q12005_factor)
+price_change_2005_to_current_nw_all = price_changes_nw.loc[recent_price_quarter]['NI_Residential_Property_Price_Index'] / \
+    (price_changes_nw.loc['Q1 2005']['NI_Residential_Property_Price_Index'] / q42004_to_q12005_factor)
+# Apartments make up 11% of the market (from multiple quarterly reports) so get the houses component as 8/9 of the total
+price_change_2005_to_current_nw_houses = (9 * price_change_2005_to_current_nw_all - price_change_2005_to_current_nw_apts) / 8
+print(f'NIHPI factors countrywide for house and apartment are {price_change_2005_to_current_nw_houses:.2f} and {price_change_2005_to_current_nw_apts:.2f}')
+# Set these factors in df but they will only be used for gap filling the LGD factors
+houses['value_current_by_nw'] = np.where(
+    houses.home_type == 'House',
+    houses.value * price_change_2005_to_current_nw_houses,
+    houses.value * price_change_2005_to_current_nw_apts)
+houses['price_per_sq_m_current_by_nw'] = houses.value_current_by_nw / houses.area_m2
+
+# By LGD
+price_changes_2005_to_current_lgd = price_changes_lgd.loc[recent_price_quarter] / (price_changes_lgd.loc['Q1 2005'] / q42004_to_q12005_factor)
+price_changes_2005_to_current_lgd = price_changes_2005_to_current_lgd.loc[[c for c in price_changes_2005_to_current_lgd.index if '_HPI' in c]]
+price_changes_2005_to_current_lgd.index = [c[:-4].replace('_',' ').replace('Armagh City', 'Armagh City,')\
+    .replace('Newry', 'Newry,') for c in price_changes_2005_to_current_lgd.index]
+price_changes_2005_to_current_lgd.index.name = 'LGD'
+print('NIHPI factors by LGD for all property types are:\n', price_changes_2005_to_current_lgd)
+
+# Get the current value calculated by LGD and property type and join on
 ghouses = gpd.GeoDataFrame(houses, geometry=gpd.points_from_xy(houses.Longitude, houses.Latitude))\
     .set_crs("EPSG:4326")\
     [['address','postcode','value','home_type','geometry','Longitude','Latitude']]
-#Join on the 2022 value calculated via LGD
+
 houses = houses.join(
     (ghouses
         .assign(id_tmp = lambda df: df.index)
-        .sjoin(lgd_geom[['LAD22NM','geometry']], how='inner')
-        .merge(price_changes_2005_2022_lgd.to_frame(name='value_factor_by_lgd'), 
+        .sjoin(lgd_geom[['LAD22NM', 'geometry']], how='inner')
+        .merge(price_changes_2005_to_current_lgd.to_frame(name='value_factor_by_lgd'),
             left_on='LAD22NM', right_on='LGD', how='left')
         .rename(columns={'LAD22NM': 'lgd'})
         .set_index('id_tmp').rename_axis('id')
-        .assign(value_2022_by_lgd = lambda df: df.value * df.value_factor_by_lgd)
-        .assign(value_2022_by_lgd = lambda df: df.apply(lambda row: row.value_2022_by_lgd * (price_change_2005_2022_nw_houses/price_change_2005_2022_nw_all) \
-            if row.home_type=='House' else \
-            row.value_2022_by_lgd * (price_change_2005_2022_nw_apts/price_change_2005_2022_nw_all), axis=1))  #move houses up a bit and apts down a bit
-        [['lgd','value_2022_by_lgd']]
+        .assign(value_current_by_lgd = lambda df: np.where(
+            df.home_type == 'House',
+            df.value * df.value_factor_by_lgd * (price_change_2005_to_current_nw_houses / price_change_2005_to_current_nw_all),
+            df.value * df.value_factor_by_lgd * (price_change_2005_to_current_nw_apts / price_change_2005_to_current_nw_all))
+            # apply the overall scaling by LGD, then move houses up a bit and apts down a bit using the nationwide ratios
+        )
+        [['lgd','value_current_by_lgd']]
     ),
     how='left'
 )
-houses['price_per_sq_m_2022_by_lgd'] = houses.value_2022_by_lgd/houses.area_m2
+houses['price_per_sq_m_current_by_lgd'] = houses.value_current_by_lgd / houses.area_m2
 
-print(f'Filling in {houses.price_per_sq_m_2022_by_lgd.isnull().mean()*100:.1f}% 2022 values with nw due to missing LGD value')
-houses['value_2022_by_lgd'].fillna(houses.value_2022_by_nw, inplace=True)
-houses['price_per_sq_m_2022_by_lgd'].fillna(houses.price_per_sq_m_2022_by_nw, inplace=True)
+print(f'Filling in {houses.price_per_sq_m_current_by_lgd.isnull().mean()*100:.1f}% current values with nw due to missing LGD value')
+houses['value_current_by_lgd'].fillna(houses.value_current_by_nw, inplace=True)
+houses['price_per_sq_m_current_by_lgd'].fillna(houses.price_per_sq_m_current_by_nw, inplace=True)
 
-print('Finally prices from 2005 to 2022 have been scaled by:\n', houses.groupby('home_type').agg(
+print('Finally prices from 2005 to now have been scaled by:\n\n', houses.groupby('home_type').agg(
     mean_price_2005 = ('price_per_sq_m', np.mean), 
-    mean_price_2022 = ('price_per_sq_m_2022_by_lgd', np.mean)))
+    mean_price_current = ('price_per_sq_m_current_by_lgd', np.mean)))
 
-del lgd_geom, price_changes_2005_2022_lgd
+del lgd_geom, price_changes_2005_to_current_lgd
 
 #Define terms for models
+#houses_mod = pd.concat([df, pd.get_dummies(df['home_type'], prefix='home_type')], axis=1)
+houses['home_type_House'] = np.where(houses.home_type == 'House', 1, 0)
+houses['home_type_Flat'] = np.where(houses.home_type == 'Flat', 1, 0)
+#
 houses['has_garden'] = houses.desc.str.contains('garden')
 houses['has_yard'] = houses.desc.str.contains('yard')
 #Most of the time has_garage is Yes when outbuilding is mentioned, but not always; these could be other buildings
 houses['has_other_outbuilding'] = houses.apply(lambda row: 'Yes' if (re.search('outbuild', row['desc']) \
     and row['has_garage']=='No') else 'No', axis=1)
 #
-houses['has_garage_01'] = houses.has_garage.apply(lambda g: 1 if g=='Yes' else 0)
-houses['has_other_outbuilding_01'] = houses.has_other_outbuilding.apply(lambda g: 1 if g=='Yes' else 0)
-houses['has_garden_01'] = houses.has_garden.apply(lambda g: 1 if g else 0)
-houses['has_yard_01'] = houses.has_yard.apply(lambda g: 1 if g else 0)
+houses['has_garage_01'] = np.where(houses.has_garage == 'Yes', 1, 0)
+houses['has_other_outbuilding_01'] = np.where(houses.has_other_outbuilding == 'Yes', 1, 0)
+houses['has_garden_01'] = np.where(houses.has_garden, 1, 0)
+houses['has_yard_01'] = np.where(houses.has_yard, 1, 0)
+#
+houses['area_squared'] = houses.area_m2**2
+houses['area_lt_60_01'] = np.where(houses.area_m2 < 60, 1, 0)
+houses['area_lt_100_01'] = np.where(houses.area_m2 < 100, 1, 0)
 
 #Trim df a bit
 houses = houses.drop(columns=['address','postcode','lgd','desc','type',
+    'price_per_sq_m',
     'has_garage','has_other_outbuilding','has_garden','has_yard',
-    'value_2022_by_nw','price_per_sq_m_2022_by_nw',
-    'price_per_sq_m'])
+    'price_per_sq_m_current_by_nw','value_current_by_nw'])
 
 #Save out for analysis, without geometry
-houses.drop(columns=['geometry']).to_csv('other_data/processed_LPS_valuations.csv', index=False)
+houses.drop(columns=['geometry']).to_csv(f'{house_price_data_dir}/other_data/processed_LPS_valuations.csv', index=False)
 
+# ---- Fit models ----
 
-#Fit models
-def calculate_glm_coefs(df, include_home_type_term=True, min_properties_per_postcode=min_properties_per_postcode):
-    #houses_mod = df.copy()
-    if include_home_type_term:
-        houses_mod = pd.concat([df, pd.get_dummies(df['home_type'], prefix='home_type')], axis=1)
-    else:
-        houses_mod = df
-
-    #This gets too big to do in one go
-    #houses_mod = pd.concat([houses_mod, pd.get_dummies(houses_mod['Postcode'], prefix='postcode')], axis=1)
-    #postcode_cols = [c for c in houses_mod.columns if 'postcode_' in c]
-    postcode_has_min_rows = (houses_mod.Postcode.value_counts() >= min_properties_per_postcode)
-    postcode_cols = ['postcode_'+c for c in houses_mod.Postcode.unique() if c in postcode_has_min_rows.index[np.where(postcode_has_min_rows)]]
+def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode=min_properties_per_postcode, normalise_pc_coefs=False):
+    ''' '''
+    #Modelling all postcodes is too big to do in one go
+    postcode_has_min_rows = (df.Postcode.value_counts() >= min_properties_per_postcode)
+    postcode_cols = [f'postcode_{c}' for c in postcode_has_min_rows.index[np.where(postcode_has_min_rows)]]
     print(f'Using {len(postcode_cols)} postcode terms with >= {min_properties_per_postcode} rows')
 
-    #Fit three times and average the coefficients
-    step = 300
+    #Fit three times, in shuffled batches of 200, and average the coefficients
+    step = 200
     glm_res = []
     for e in [1,2,3]:
         #Need to jumble up the postcodes to avoid fitting only one area at once
@@ -294,135 +323,149 @@ def calculate_glm_coefs(df, include_home_type_term=True, min_properties_per_post
 
         postcode_glms = []
         for i in range(0,len(postcode_cols),step):
+            print(e, i)
             postcode_cols_batch = jumbled_postcode_cols[i:min(i+step,len(postcode_cols))]
             postcodes_batch = [p.split('_')[1] for p in postcode_cols_batch]
             
-            #train_batch = houses_mod[houses_mod.Postcode.isin(postcodes_batch)]
-            #Can leave out the unused postcode cols
-            #train_batch = train_batch[[c for c in houses_mod.columns if 'postcode_' not in c or c in postcode_cols_batch]]
-            
-            tmp_houses_mod = houses_mod[houses_mod.Postcode.isin(postcodes_batch)]
-            train_batch = pd.concat([tmp_houses_mod, pd.get_dummies(tmp_houses_mod['Postcode'], prefix='postcode')], axis=1)
-            del tmp_houses_mod
+            train_batch = df[df.Postcode.isin(postcodes_batch)]
+            train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['Postcode'], prefix='postcode')], axis=1)
+            # for formula method
+            train_batch = train_batch.rename(columns = {c: c.replace(' ', 'SPACE') for c in postcode_cols_batch})
             
             try:
-                features = ['has_garage_01','has_garden_01','has_yard_01','has_other_outbuilding_01']
-                if include_home_type_term:
-                    features += ['home_type_House','home_type_Flat'] 
-                features += postcode_cols_batch
-                this_glm = GLM(train_batch['price_per_sq_m_2022_by_lgd'], 
-                    train_batch[features]).fit()
-                #No need for constant, as everything is House or Flat so base price can go into those
-                #Don't know why but I don't need to leave out one factor level here
+                # New formula method to get interactions
+                full_formula = formula_minus_postcodes + ' + ' + ' + '.join([c.replace(' ', 'SPACE') for c in postcode_cols_batch])
+                this_glm = smf.glm(data=train_batch, formula=full_formula).fit()
+
                 postcode_glms.append(this_glm)
             except np.linalg.LinAlgError:
                 print('This batch GLM did not converge; skipping')
-            print(i, len(postcode_glms), np.round(psutil.Process().memory_info().rss / (1024 * 1024),0))
+            #print(i, len(postcode_glms), np.round(psutil.Process().memory_info().rss / (1024 * 1024),0))
             if psutil.Process().memory_info().rss / (1024 * 1024) > 4000:
                 gc.collect()
 
         glm_res.append(postcode_glms)
 
-    del houses_mod
-
     pc_coefs = pd.concat([g.params for g in glm_res[0]]).filter(like='postcode').to_frame(name='coef_1')\
         .join(pd.concat([g.params for g in glm_res[1]]).filter(like='postcode').to_frame(name='coef_2'))\
         .join(pd.concat([g.params for g in glm_res[2]]).filter(like='postcode').to_frame(name='coef_3'))
-    pc_coefs['pc_coef_avg'] = (pc_coefs.coef_1 + pc_coefs.coef_2 + pc_coefs.coef_3)/3
+    pc_coefs['pc_coef_avg'] = (pc_coefs.coef_1 + pc_coefs.coef_2 + pc_coefs.coef_3) / 3
+    
+    pc_coef_serrors = pd.concat([g.bse for g in glm_res[0]]).filter(like='postcode').to_frame(name='coef_se_1')\
+        .join(pd.concat([g.bse for g in glm_res[1]]).filter(like='postcode').to_frame(name='coef_se_2'))\
+        .join(pd.concat([g.bse for g in glm_res[2]]).filter(like='postcode').to_frame(name='coef_se_3'))
+    pc_coef_serrors['pc_coef_se_avg'] = (pc_coef_serrors.coef_se_1 + pc_coef_serrors.coef_se_2 + pc_coef_serrors.coef_se_3) / 3
+    pc_coefs = pc_coefs.join(pc_coef_serrors)
 
-    pc_coefs['postcode'] = [s.split('_')[-1] for s in pc_coefs.index]
-    pc_coefs = pc_coefs.reset_index()[['postcode','pc_coef_avg']]
+    pc_coefs['postcode'] = [s.split('_')[-1].replace('SPACE', ' ') for s in pc_coefs.index]
+    pc_coefs = pc_coefs.reset_index()[['postcode', 'pc_coef_avg', 'pc_coef_se_avg']]
+
+    if normalise_pc_coefs:
+        # Normalise coefficients to zero for the map
+        pc_coefs['pc_coef_avg'] -= pc_coefs.pc_coef_avg.mean()
+        # SE sizes should still make sense
 
     #Save non-postcode coefs for calculator
     #ravel doesn't work if sublists are unequal length, but concatenate does work here
-    non_pc_coefs = (pd.concat([g.params for g in np.concatenate(glm_res)])
-        .filter(regex='const|area|garage|garden|yard|outbuilding|home_type')
-        .to_frame(name='value')
+    non_pc_coefs = (pd.concat([
+            g.params.to_frame(name='value').join(g.bse.to_frame(name='se'))
+            for g in np.concatenate(glm_res)])
+        .filter(regex='const|area|garage|garden|yard|outbuilding|home_type', axis=0)
         .assign(coef = lambda df: df.index).reset_index(drop=True)
         .groupby('coef', as_index=False)
-        .agg(value_mean = ('value', lambda v: np.round(np.mean(v),4)))
+        .agg(
+            value_mean = ('value', lambda v: np.round(np.mean(v),5)),
+            se_mean = ('se', lambda v: np.round(np.mean(v),5))
+            )
     )
 
     return pc_coefs, non_pc_coefs
 
 #All data
 print('\nFitting models for all properties')
-pc_coefs, non_pc_coefs = calculate_glm_coefs(houses)
-#We need one of these with pc coefs normalised to zero, for the map, and one non-normalised for the calculator
-pc_coefs_normd = pc_coefs.copy()
-pc_coefs_normd['pc_coef_avg'] -= pc_coefs_normd.pc_coef_avg.mean()
+all_home_types_formula = 'price_per_sq_m_current_by_lgd ~ 0 + ' + \
+    'has_garage_01 + has_garden_01 + has_yard_01 + has_other_outbuilding_01 + ' + \
+    ' + home_type + home_type:area_m2 + home_type:area_squared + home_type:area_lt_60_01'
+pc_coefs_normd, _ = calculate_glm_coefs(houses, all_home_types_formula, normalise_pc_coefs=True)
+time.sleep(5)
+
 #Houses only
 print('\nFitting models for houses')
-pc_coefs_houses_normd, _ = calculate_glm_coefs(houses[houses.home_type=='House'], include_home_type_term=False)
-pc_coefs_houses_normd['pc_coef_avg'] -= pc_coefs_houses_normd.pc_coef_avg.mean()
+single_home_type_formula = 'price_per_sq_m_current_by_lgd ~ 0 + ' + \
+    'has_garage_01 + has_garden_01 + has_yard_01 + has_other_outbuilding_01 + ' + \
+    ' + area_m2 + area_squared + area_lt_60_01'
+pc_coefs_houses_normd, _ = calculate_glm_coefs(houses[houses.home_type=='House'], single_home_type_formula, normalise_pc_coefs=True)
+time.sleep(5)
+
 #Flats only
 print('\nFitting models for flats')
-pc_coefs_flats_normd, _ = calculate_glm_coefs(houses[houses.home_type=='Flat'], include_home_type_term=False)
-pc_coefs_flats_normd['pc_coef_avg'] -= pc_coefs_flats_normd.pc_coef_avg.mean()
+pc_coefs_flats_normd, _ = calculate_glm_coefs(houses[houses.home_type=='Flat'], single_home_type_formula, normalise_pc_coefs=True)
+time.sleep(5)
+gc.collect()
 
+# Can get SE or conf_int on each postcode coefficient (average of the 3 fits)
+#  but how to combine other term SEs in calculator model?
+# Or get RMSE training error from each fit as (((this_glm.resid_response)**2).mean())**0.5)
+#  and take median, or combine all residuals. Could inflate a bit for test error.
+#  Values of ~150 ppsqm are typical, i.e. about 10%
+# Or could store SEs for all coefs and in the calculator, sample each coef in a Monte Carlo method to get prediction range.
 
-def calculate_glm_coefs_by_LSOA(df):
-    #houses_mod = df.copy()
-    houses_mod = pd.concat([df, pd.get_dummies(df['home_type'], prefix='home_type')], axis=1)
-
-    lsoa_has_50_rows = (houses_mod['LSOA Code'].value_counts() >= 50)
-    lsoa_cols = ['lsoa_'+c for c in houses_mod['LSOA Code'].unique() if c in lsoa_has_50_rows.index[np.where(lsoa_has_50_rows)]]
-    print(f'Using {len(lsoa_cols)} LSOA terms with >= 50 rows')
+def calculate_glm_coefs_by_LSOA(df, formula_minus_postcodes, min_properties_per_lsoa=50, normalise_lsoa_coefs=True):
+    ''' '''
+    lsoa_has_50_rows = (df['LSOA Code'].value_counts() >= min_properties_per_lsoa)
+    lsoa_cols = [f'lsoa_{c}' for c in lsoa_has_50_rows.index[np.where(lsoa_has_50_rows)]]
+    print(f'Using {len(lsoa_cols)} LSOA terms with >= {min_properties_per_lsoa} rows')
 
     step = 150
     jumbled_lsoa_cols = copy.copy(lsoa_cols)
     random.shuffle(jumbled_lsoa_cols)
     all_lsoa_coefs = []
-    for i in range(0,len(lsoa_cols),step):
+    for i in range(0, len(lsoa_cols), step):
         print(i)
         lsoa_cols_batch = jumbled_lsoa_cols[i:min(i+step,len(lsoa_cols))]
         lsoa_batch = [p.split('_')[1] for p in lsoa_cols_batch]
-        
-        #train_batch = houses_mod[houses_mod.Postcode.isin(postcodes_batch)]
-        #Can leave out the unused postcode cols
-        #train_batch = train_batch[[c for c in houses_mod.columns if 'postcode_' not in c or c in postcode_cols_batch]]
-        
-        tmp_houses_mod = houses_mod[houses_mod['LSOA Code'].isin(lsoa_batch)]
-        train_batch = pd.concat([tmp_houses_mod, pd.get_dummies(tmp_houses_mod['LSOA Code'], prefix='lsoa')], axis=1)
-        del tmp_houses_mod
 
-        #houses_mod = houses_mod[houses_mod['LSOA Code'].isin(lsoa_has_50_rows.index[np.where(lsoa_has_50_rows)])]
-        #train_batch = pd.concat([houses_mod, pd.get_dummies(houses_mod['LSOA Code'], prefix='lsoa')], axis=1)
+        train_batch = df[df['LSOA Code'].isin(lsoa_batch)]
+        train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['LSOA Code'], prefix='lsoa')], axis=1)
 
-        features = ['has_garage_01','has_garden_01','has_yard_01','has_other_outbuilding_01']
-        features += ['home_type_House','home_type_Flat'] 
-        features += lsoa_cols_batch[:-1]
-        #For some reason this but not the other GLMs fails if all cat columns
-        #  are included, even if no intercept is used, so need to exclude one
-        this_glm = GLM(train_batch['price_per_sq_m_2022_by_lgd'], 
-            train_batch[features]).fit()
+        # New formula method
+        full_formula = formula_minus_postcodes + ' + ' + ' + '.join(lsoa_cols_batch)
+        this_glm = smf.glm(data=train_batch, formula=full_formula).fit()
 
         lsoa_coefs = this_glm.params.filter(like='lsoa').to_frame(name='lsoa_coef')
     
-        #I think the excluded LSOA has a zero coefficient (if no intercept)
-        print(f'Setting {lsoa_cols_batch[-1]} coef to 0 before normalising')
-        lsoa_coefs.loc[lsoa_cols_batch[-1]] = 0.
+        # Old method
+        # #I think the excluded LSOA has a zero coefficient (if no intercept)
+        # print(f'Setting {lsoa_cols_batch[-1]} coef to 0 before normalising')
+        # lsoa_coefs.loc[lsoa_cols_batch[-1]] = 0.
 
         all_lsoa_coefs.append(lsoa_coefs)
 
     lsoa_coefs = pd.concat(all_lsoa_coefs).drop_duplicates()
 
-    #These aren't necessarily centred on zero; re-centre here
-    #  (OK to change their relationship with the non-lsoa coefs
-    #   because this will only be used for the tooltip, not the calculator)
-    lsoa_coefs['lsoa_coef'] -= lsoa_coefs.lsoa_coef.mean()
-    
-    #print(f'{lsoa_cols[-1]} coef is now {lsoa_coefs.loc[lsoa_cols[-1]].lsoa_coef:.1f}')
-    #print(f"Its ppsqm is £{houses_mod[houses_mod['LSOA Code']==lsoa_cols[-1].split('_')[-1]].price_per_sq_m_2022_by_lgd.mean():.0f}")
-
     lsoa_coefs['LSOA Code'] = [s.split('_')[-1] for s in lsoa_coefs.index]
     lsoa_coefs = lsoa_coefs.reset_index()[['LSOA Code','lsoa_coef']]
 
+    if normalise_lsoa_coefs:
+        #These aren't necessarily centred on zero; re-centre here
+        #  (OK to change their relationship with the non-lsoa coefs
+        #   because this will only be used for the map, not the calculator)
+        lsoa_coefs['lsoa_coef'] -= lsoa_coefs.lsoa_coef.mean()
+
     return lsoa_coefs
 
-gc.collect()
+
 print('\nFitting GLM by LSOA')
-lsoa_coefs = calculate_glm_coefs_by_LSOA(houses)
+lsoa_coefs = calculate_glm_coefs_by_LSOA(houses, all_home_types_formula)
+time.sleep(5)
+
+# There is an uncertainty on all the postcode and LSOA coefs of ~50-100,
+#   i.e. we get a different result each time depending on the batch shuffling.
+#   Some of this will be handled by the spatial smoothing, and the rest is
+#   acceptable given that the range of coef values is ~-1000 to +2000, so
+#   most postcodes' rankings will be fairly stable even with +/-100 on coef value.
+
+# ---- Save coefficients by postcode for map ----
 
 def convert_price_to_colour(this_ppsqm, all_ppsqm, cmap='BrBG'):
     breaks = np.nanpercentile(all_ppsqm, [i*100/10 for i in range(0,11)])
@@ -439,16 +482,6 @@ def convert_price_to_colour(this_ppsqm, all_ppsqm, cmap='BrBG'):
     fifteen_map = cm.get_cmap(cmap, 14)  #the index range for this is 0-11 inclusive
     cols = [fifteen_map(x) for x in [1,2,3,4,5,8,9,10,11,12]]  #list of length 10
     return colors.to_hex(cols[max(whichbin-1,0)])  #index the list with 0-9 inclusive
-
-#Save 2022 value summaries by different methods
-#Previously used 'simple method' of getting mean ppsqm by postcode for all/houses/flats,
-#  and a 50x50 quantile grid using pd.qcut on lon and lat
-
-#Get the LSOA names to join to the codes, and the geometries for the geojson output
-soas = gpd.read_file('other_data/soa2001_ODNI.json')\
-    .set_crs('EPSG:29902', allow_override=True)\
-    .to_crs('EPSG:4326')
-soas['SOA_LABEL'] = soas.SOA_LABEL.apply(lambda l: l.replace('_',' '))
 
 def run_one_smooth_pass(summ_coefs, alpha=1000):
     '''
@@ -486,17 +519,30 @@ def run_one_smooth_pass(summ_coefs, alpha=1000):
 
     return new_summ_coefs
 
-def summarise_coefs(houses, pc_coefs, soas, suffix='', cmap='BrBG', alpha=None):
-    summ_coefs = (houses.groupby(['Postcode','LSOA Code'], as_index=False).agg(
+def summarise_coefs(houses, coefs_df, soas, region_type='Postcode', suffix='', cmap='BrBG', alpha=None):
+    if region_type == 'Postcode':
+        group_keys = ['Postcode', 'LSOA Code']
+        coefs_join_key_left = 'Postcode'
+        coefs_join_key_right = 'postcode'
+        coefs_ppsqm_name = 'pc_coef_avg'
+        popup_region_column = 'Postcode'
+    elif region_type == 'LSOA':
+        group_keys = ['LSOA Code']
+        coefs_join_key_left = 'LSOA Code'
+        coefs_join_key_right = 'LSOA Code'
+        coefs_ppsqm_name = 'lsoa_coef'
+        popup_region_column = 'SOA_LABEL'
+
+    summ_coefs = (houses.groupby(group_keys, as_index=False).agg(
         n = ('value', len),
-        longitude = ('Longitude', np.max),
+        longitude = ('Longitude', np.max), # there is only one value per postcode so any agg will do
         latitude = ('Latitude', np.max),
-        mean_val = ('value_2022_by_lgd', lambda v: round(np.mean(v))),
+        mean_val = ('value_current_by_lgd', lambda v: round(np.mean(v))),
         mean_size = ('area_m2', lambda a: round(np.mean(a))),
-        mean_price_per_sq_m = ('price_per_sq_m_2022_by_lgd', lambda p: round(np.mean(p)))
+        mean_price_per_sq_m = ('price_per_sq_m_current_by_lgd', lambda p: round(np.mean(p)))
         )
-        .merge(pc_coefs, left_on='Postcode', right_on='postcode', how='inner')
-        .rename(columns={'pc_coef_avg': 'ppsqm_delta'})
+        .merge(coefs_df, left_on=coefs_join_key_left, right_on=coefs_join_key_right, how='inner')
+        .rename(columns={coefs_ppsqm_name: 'ppsqm_delta'})
     )
     summ_coefs['ppsqm_delta'] = np.round(summ_coefs.ppsqm_delta, 1)
 
@@ -515,118 +561,138 @@ def summarise_coefs(houses, pc_coefs, soas, suffix='', cmap='BrBG', alpha=None):
     summ_coefs = (summ_coefs
         .merge(soas, left_on='LSOA Code', right_on='SOA_CODE', how='inner')
         .assign(popup_text = lambda df: df.apply(
-            lambda row: f'<b>{row.Postcode}</b><br/>{row.n:g} properties<br/>'+\
+            lambda row: f'<b>{row[popup_region_column]}</b><br/>{row.n:g} properties<br/>'+\
                 f'Mean value £{row.mean_val:,.0f}<br/>'+\
                 f"<b>£{abs(row.ppsqm_delta):,.0f}</b> per sq. m {high_low_strings[0] if row.ppsqm_delta > 0 else high_low_strings[1]} average", axis=1))
         .assign(html_colour = lambda df: df.apply(lambda row: convert_price_to_colour(row.ppsqm_delta, summ_coefs.ppsqm_delta.values, cmap=cmap), axis=1))
-        [['Postcode','SOA_LABEL','n','longitude','latitude',
-          'mean_val','mean_size','mean_price_per_sq_m','ppsqm_delta',
-          'html_colour','popup_text']]
+        .query("n >= 10")  # for the LSOA case; not needed for Postcode
     )
-    return summ_coefs
 
-def save_colour_bands_file(summ_coefs_df, output_filename):
+    col_list = [
+        coefs_join_key_left,'SOA_LABEL','n','longitude','latitude',
+        'mean_val','mean_size','mean_price_per_sq_m','ppsqm_delta',
+        'html_colour','popup_text'
+    ]
+    if region_type == 'LSOA':
+        col_list.append('geometry')
+
+    return summ_coefs[col_list]
+
+def save_colour_bands_file(summ_coefs_df, output_filename, unit_variable='Postcode'):
     (summ_coefs_df.groupby('html_colour', as_index=False).agg(
         price_lower = ('ppsqm_delta', lambda x: int(np.min(x))),
         price_upper = ('ppsqm_delta', lambda x: int(np.max(x))),
-        n_postcodes = ('Postcode', len))
+        n_units = (unit_variable, len))
         .sort_values('price_lower')
         .to_csv(output_filename, index=False)
     )
 
-#Map data from GLM by postcode - all data
-#summ_coefs = summarise_coefs(houses, pc_coefs_normd, soas, cmap='BrBG', alpha=None)
-#summ_coefs.to_csv(f'static/ppsqm_nge10_glmmethod.csv', index=False)
-#summ_coefs = summarise_coefs(houses, pc_coefs_normd, soas, cmap='BrBG', alpha=1000)
-#summ_coefs.to_csv(f'static/ppsqm_nge10_glmmethod_smoothed_alpha1000.csv', index=False)
+# All data
 summ_coefs = summarise_coefs(houses, pc_coefs_normd, soas, cmap='BrBG', alpha=smoothing_alpha)
 summ_coefs.to_csv(f'static/ppsqm_nge10_glmmethod_smoothed_alpha{smoothing_alpha}.csv', index=False)
-#
-#colour bands for plot
-save_colour_bands_file(summ_coefs, 'static/colour_bands_ppsqm_nge10_glmmethod.csv')
+save_colour_bands_file(summ_coefs, 'static/colour_bands_ppsqm_nge10_glmmethod.csv')  # colour bands for plot
+print('Saved map coefficients for all properties')
 
-#Map data from GLM by postcode - houses only
-#summ_coefs_houses = summarise_coefs(houses[houses.home_type=='House'], pc_coefs_houses_normd, soas, suffix='_houses', cmap='RdBu')
-#summ_coefs_houses.to_csv(f'static/ppsqm_nge10_glmmethod_houses.csv', index=False)
+# Houses only
 summ_coefs_houses = summarise_coefs(houses[houses.home_type=='House'], pc_coefs_houses_normd, soas, suffix='_houses', cmap='RdBu', alpha=smoothing_alpha)
 summ_coefs_houses.to_csv(f'static/ppsqm_nge10_glmmethod_smoothed_alpha{smoothing_alpha}_houses.csv', index=False)
 save_colour_bands_file(summ_coefs_houses, 'static/colour_bands_ppsqm_nge10_glmmethod_houses.csv')
 
-#Map data from GLM by postcode - flats only
-#summ_coefs_flats = summarise_coefs(houses[houses.home_type=='Flat'], pc_coefs_flats_normd, soas, suffix='_flats', cmap='PRGn_r')
-#summ_coefs_flats.to_csv(f'static/ppsqm_nge10_glmmethod_flats.csv', index=False)
+# Flats only
 summ_coefs_flats = summarise_coefs(houses[houses.home_type=='Flat'], pc_coefs_flats_normd, soas, suffix='_flats', cmap='PRGn_r', alpha=smoothing_alpha)
 summ_coefs_flats.to_csv(f'static/ppsqm_nge10_glmmethod_smoothed_alpha{smoothing_alpha}_flats.csv', index=False)
 save_colour_bands_file(summ_coefs_flats, 'static/colour_bands_ppsqm_nge10_glmmethod_flats.csv')
+print('Saved map coefficients for houses and flats')
 
-#Calculator coefficients from GLM by short postcode
-def summ_values_by_postcode(summ_coefs_for_calculator, postcode_column):
-    res = (summ_coefs_for_calculator.groupby(postcode_column, as_index=False).agg(
-        value_mean = ('ppsqm_delta', lambda v: np.round(np.mean(v),4)),
-        value_pc10 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.1]),4)),
-        value_pc90 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.9]),4))
-        )
-        .rename(columns={postcode_column: 'coef'})
-    )
-    return res
-
-summ_coefs_for_calculator = summarise_coefs(houses, pc_coefs, soas, cmap='BrBG', alpha=smoothing_alpha)  #using the unnormalised coefficients
-summ_coefs_for_calculator['Postcode_short'] = summ_coefs_for_calculator.Postcode.apply(lambda p: p.split(' ')[0])
-# summ_coefs_short = (summ_coefs_for_calculator.groupby('Postcode_short', as_index=False).agg(
-#     value_mean = ('ppsqm_delta', lambda v: np.round(np.mean(v),4)),
-#     value_pc10 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.1]),4)),
-#     value_pc90 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.9]),4))
-#     )
-#     .rename(columns={'Postcode_short': 'coef'})
-# )
-# summ_coefs_long = (summ_coefs_for_calculator.groupby('Postcode', as_index=False).agg(
-#     value_mean = ('ppsqm_delta', lambda v: np.round(np.mean(v),4)),
-#     value_pc10 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.1]),4)),
-#     value_pc90 = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.9]),4))
-#     )
-#     .rename(columns={'Postcode': 'coef'})
-# )
-summ_coefs_short = summ_values_by_postcode(summ_coefs_for_calculator, 'Postcode_short')
-summ_coefs_long = summ_values_by_postcode(summ_coefs_for_calculator, 'Postcode')
-summ_coefs_comb = pd.concat([non_pc_coefs, summ_coefs_short, summ_coefs_long])  #this is used again later
-summ_coefs_comb.to_csv(f'static/calculator_coefs_smoothed_alpha{smoothing_alpha}.csv', index=False)
-
-
-#Map data from GLM by LSOA
-summ_soas_coefs = (houses.groupby('LSOA Code', as_index=False).agg(
-    n = ('value', len),
-    longitude = ('Longitude', np.max),
-    latitude = ('Latitude', np.max),
-    mean_val = ('value_2022_by_lgd', np.mean),
-    mean_size = ('area_m2', np.mean)
-    )
-    .merge(lsoa_coefs, on='LSOA Code', how='inner')
-    .rename(columns={'lsoa_coef': 'ppsqm_delta'})
-)
-high_low_strings = ("<span style='color: #015c53'><b>above</b></span>", "<span style='color: #7f4909'><b>below</b></span>")
-summ_soas_coefs = (summ_soas_coefs
-    .merge(soas, left_on='LSOA Code', right_on='SOA_CODE', how='inner')
-    .assign(popup_text = lambda df: df.apply(
-        lambda row: f'<b>{row.SOA_LABEL}</b><br/>{row.n:g} properties<br/>'+\
-            f'Mean value £{row.mean_val:,.0f}<br/>'+\
-            f"<b>£{abs(row.ppsqm_delta):,.0f}</b> per sq. m {high_low_strings[0] if row.ppsqm_delta > 0 else high_low_strings[1]} average", axis=1))
-    .assign(html_colour = lambda df: df.apply(lambda row: 
-        convert_price_to_colour(row.ppsqm_delta, summ_soas_coefs.ppsqm_delta.values), axis=1))
-    .query("n >= 10")
-)
+# LSOA, all data
+summ_soas_coefs = summarise_coefs(houses, lsoa_coefs, soas, region_type='LSOA', alpha=None)
 summ_soas_coefs = gpd.GeoDataFrame(summ_soas_coefs)[['LSOA Code','n','ppsqm_delta',
                                                      'html_colour','popup_text','geometry']]
 #simplify shapes to give a smaller file
 summ_soas_coefs['geometry'] = summ_soas_coefs.geometry.simplify(0.0002)
 summ_soas_coefs.to_file('static/ppsqm_nge10_LSOAglmmethod.json', driver='GeoJSON')
-#colour bands for plot
-(summ_soas_coefs.groupby('html_colour', as_index=False).agg(
-    price_lower = ('ppsqm_delta', lambda x: int(np.min(x))),
-    price_upper = ('ppsqm_delta', lambda x: int(np.max(x))),
-    n_lsoas = ('LSOA Code', len))
-    .sort_values('price_lower')
-    .to_csv(f'static/colour_bands_ppsqm_nge10_LSOAglmmethod.csv', index=False)
-)
+save_colour_bands_file(summ_soas_coefs, 'static/colour_bands_ppsqm_nge10_LSOAglmmethod.csv', unit_variable='LSOA Code')
+print('Saved coefficients by LSOA')
+
+# ---- Calculator coefficients: fit slightly different models ----
+
+calculator_formula_houses = 'price_per_sq_m_current_by_lgd ~ 0 + ' + \
+    'has_garage_01 + has_garden_01 + ' + \
+    ' + area_m2 + area_squared + area_lt_60_01'
+calculator_formula_flats = 'price_per_sq_m_current_by_lgd ~ 0 + ' + \
+    ' + area_m2 + area_squared + area_lt_60_01'
+
+pc_coefs_calculator_houses, non_pc_coefs_calculator_houses = calculate_glm_coefs(
+    houses[houses.home_type == 'House'], calculator_formula_houses, normalise_pc_coefs=False)
+
+pc_coefs_calculator_flats, non_pc_coefs_calculator_flats = calculate_glm_coefs(
+    houses[houses.home_type == 'Flat'], calculator_formula_flats, normalise_pc_coefs=False)
+
+# These have the standard error which is really related to number of training observations
+#   and not the variation within a postcode, but it gives a reasonable way
+#   to generate a range for each postcode.
+# For short postcodes, fitting a model and getting SE would not work, because
+#   the SEs could be small, meaning a short postcode *average* effect is well fitted
+#   but doesn't say anything about variation within the short postcode,
+#   which can be large. So keep the old method for this, of combining the 
+#   short postcodes and taking quantiles.
+# Combine these two methods to assign generic value_lower and value_upper to all postcode terms.
+
+def summ_values_by_postcode(summ_coefs_for_calculator, postcode_column):
+    res = (summ_coefs_for_calculator.groupby(postcode_column, as_index=False).agg(
+        value_mean = ('ppsqm_delta', lambda v: np.round(np.mean(v), 4)),
+        value_lower = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.05]), 4)),
+        value_upper = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.95]), 4))
+        )
+        .rename(columns={postcode_column: 'coef'})
+    )
+    return res
+
+def combine_coefs_for_calculator(pc_coefs, non_pc_coefs, houses, soas, alpha=None):
+    # Use summarise_coefs just to get the spatial smoothing on the pc_coef_avg;
+    #   keep the SE from unsmoothed.
+    pc_coefs_calculator_smoothed = (
+        summarise_coefs(houses, pc_coefs, soas, alpha=alpha)
+        .filter(['Postcode', 'ppsqm_delta'])
+        .merge(pc_coefs[['postcode', 'pc_coef_se_avg']].rename(columns={'postcode': 'Postcode'}),
+            on='Postcode', how='left')
+        )
+    comb_coefs_calculator = pd.concat([
+        (non_pc_coefs
+            .assign(value_lower = lambda df: df.value_mean - 2*df.se_mean, 
+                value_upper = lambda df: df.value_mean + 2*df.se_mean)),
+        (pc_coefs_calculator_smoothed
+            .assign(value_lower = lambda df: df.ppsqm_delta - 2*df.pc_coef_se_avg,
+                value_upper = lambda df: df.ppsqm_delta + 2*df.pc_coef_se_avg)
+            .rename(columns={'Postcode': 'coef', 'ppsqm_delta': 'value_mean'})),
+        summ_values_by_postcode(
+            pc_coefs_calculator_smoothed.assign(Postcode_short = lambda df: df.Postcode.apply(lambda p: p.split(' ')[0])),
+            'Postcode_short')
+        ])[['coef', 'value_mean', 'value_lower', 'value_upper']]
+    return comb_coefs_calculator
+
+# summ_coefs_for_calculator = summarise_coefs(houses, pc_coefs, soas, cmap='BrBG', alpha=smoothing_alpha)  #using the unnormalised coefficients
+# summ_coefs_for_calculator['Postcode_short'] = summ_coefs_for_calculator.Postcode.apply(lambda p: p.split(' ')[0])
+# summ_coefs_short = summ_values_by_postcode(summ_coefs_for_calculator, 'Postcode_short')
+# summ_coefs_long = summ_values_by_postcode(summ_coefs_for_calculator, 'Postcode')
+# summ_coefs_comb = pd.concat([non_pc_coefs, summ_coefs_short, summ_coefs_long])  #this is used again later
+# summ_coefs_comb.to_csv(f'static/calculator_coefs_smoothed_alpha{smoothing_alpha}.csv', index=False)
+
+# Houses
+comb_coefs_calculator_houses = combine_coefs_for_calculator(
+    pc_coefs_calculator_houses, non_pc_coefs_calculator_houses,
+    houses[houses.home_type=='House'], soas,
+    alpha=smoothing_alpha)
+comb_coefs_calculator_flats.round(5).to_csv(f'static/calculator_coefs_houses_smoothed_alpha{smoothing_alpha}.csv', index=False)
+
+# Flats
+comb_coefs_calculator_flats = combine_coefs_for_calculator(
+    pc_coefs_calculator_flats, non_pc_coefs_calculator_flats,
+    houses[houses.home_type=='Flat'], soas,
+    alpha=smoothing_alpha)
+comb_coefs_calculator_flats.round(5).to_csv(f'static/calculator_coefs_flats_smoothed_alpha{smoothing_alpha}.csv', index=False)
+
+print('Saved calculator coefficients')
 
 #Nearest short postcodes, for the calculator output
 short_postcodes = (ghouses
@@ -667,4 +733,6 @@ short_postcodes = (ghouses
  .query('postcode in @summ_coefs_comb.coef')
  .to_csv('static/postcodelongtoshort_nearest_five.csv', index=False)
 )
+print('Saved postcode nearest fives long and short')
 
+print('Done')
