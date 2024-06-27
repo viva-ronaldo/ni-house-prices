@@ -96,3 +96,28 @@ a:hover, a:focus {
 .page-link {
     color: #1f78b4;
 }
+
+#loading {
+    position: fixed;
+    width: 100%;
+    height: 60%;
+    top: 10%;
+    left: 0;
+    background-color: rgba(252,252,236,0.9);
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+#loading img {
+    width: 280px;
+    animation: fadeIn 1500ms;
+}
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+#loading p {
+    font-size: 1.5rem;
+}
