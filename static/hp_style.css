@@ -11,6 +11,10 @@ body {
     background-color: linen;
 }
 
+h1 {
+    font-size: 2.2em !important;
+}
+
 a {
     color: royalblue;
     text-decoration: none;
@@ -18,7 +22,7 @@ a {
 a:hover, a:focus {
     color: plum;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: color 0.3s;
 }
 
 .help-tooltip {
@@ -28,10 +32,19 @@ a:hover, a:focus {
     color: chocolate;
 }
 .tooltip > .tooltip-inner {
+    max-width: 350px !important;
+    text-align: left !important;
+    white-space: normal !important;
+    padding: 12px 16px;
     background-color: #d2e4f0;
     color: black; 
     border: 1px solid black; 
     font-size: 1.1em;
+}
+.tooltip-inner ul, .tooltip-inner li {
+    text-align: left !important;
+    margin-left: 1.2em;
+    padding-left: 0;
 }
 
 @media screen and (max-width: 450px) {
@@ -72,7 +85,7 @@ a:hover, a:focus {
     background-color: #ffdfbf;
 }
 .postcode_table_box {
-    background-color: #d2e4f0;
+    background-color: #f3e6ff;
 }
 
 .btn-info, .btn-info:hover, .btn-info:active, .btn-info:visited {
@@ -90,11 +103,11 @@ a:hover, a:focus {
     border-color: #fb9a99;
 }
 .active > .page-link, .page-link.active {
-    background-color: #1f78b4;
-    border-color: #1f78b4;
+    background-color: #a473ab;
+    border-color: #a473ab;
 }
-.page-link {
-    color: #1f78b4;
+.page-link, .page-link:hover, .page-link:focus {
+    color: #5a338b;
 }
 
 #loading {
