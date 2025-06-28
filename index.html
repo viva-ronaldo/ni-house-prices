@@ -817,7 +817,7 @@
         complete: function() {
           $('#loading').hide();
         },
-        url: './static/ppsqm_nge10_glmmethod_smoothed_alpha3000.csv',
+        url: './static/ppsqm_nge10_glmmethod_smoothed_alpha3000_2024_Q4.csv',
         dataType: 'text',
         success: function(data) {
           allpts_data = Papa.parse(data, {
@@ -880,7 +880,7 @@
       });
 
       // colour bands
-      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod.csv', {
+      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod_2024_Q4.csv', {
         header: true, download: true, dynamicTyping: true,
         complete: function(results) {
           colour_bands_glmmethod = results.data.slice(0,-1).reverse();
@@ -894,7 +894,7 @@
           legend.addTo(map);
         }
       });
-      Papa.parse('./static/colour_bands_ppsqm_nge10_LSOAglmmethod.csv', {
+      Papa.parse('./static/colour_bands_ppsqm_nge10_LSOAglmmethod_2024_Q4.csv', {
         header: true, download: true, dynamicTyping: true,
         complete: function(results) {
           colour_bands_soas = results.data.slice(0,-1).reverse();
@@ -902,7 +902,7 @@
       });
 
       //Geojson layer for SOA
-      $.get('./static/ppsqm_nge10_LSOAglmmethod.json', function(geojsonString) {
+      $.get('./static/ppsqm_nge10_LSOAglmmethod_2024_Q4.json', function(geojsonString) {
         props_gj = L.geoJson(geojsonString, {
           style: function (feature) {
             return {
@@ -919,7 +919,7 @@
       });
 
       // calculator coefficients
-      Papa.parse('./static/calculator_coefs_houses_smoothed_alpha3000.csv', {
+      Papa.parse('./static/calculator_coefs_houses_smoothed_alpha3000_2024_Q4.csv', {
         header: true,
         download: true,
         dynamicTyping: true,
@@ -927,7 +927,7 @@
           calculator_coefs_houses = results.data.slice(0,-1);
         }
       });
-      Papa.parse('./static/calculator_coefs_flats_smoothed_alpha3000.csv', {
+      Papa.parse('./static/calculator_coefs_flats_smoothed_alpha3000_2024_Q4.csv', {
         header: true,
         download: true,
         dynamicTyping: true,
