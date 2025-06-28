@@ -85,7 +85,11 @@
             <div class="container-fluid py-2">
               <h1 class="display-5 fw-bold">The Northern Ireland Property Value Map</h1>
               <p class="lead">The map shows the estimated <b>value added to a property, per square metre, by each postcode</b> in Northern Ireland.</p>
-              <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas. Prices are from <b>March 2024</b>. Some postcodes are not present in the data due to an insufficient number of properties found in the Land &amp; Property Service (LPS) data (see <a href='#HowItWorks'><b>How it works</b></a>).</p>
+              <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas.</p>
+              <p>
+                Prices are estimates for today using most recent data from <b id="latest-data-date"></b>.
+                Some postcodes are not present in the data due to an insufficient number of properties found in the Land &amp; Property Service (LPS) data (see <a href='#HowItWorks'><b>How it works</b></a>).
+              </p>
               <p>The map data can be viewed by individual postcode, or with postcodes grouped together by government Super Output Areas (SOAs)
                 <span class='help-tooltip' title='A NISRA geography that divides Northern Ireland into 890 areas of approximately equal population' data-bs-toggle="tooltip"><i class="fas fa-question-circle fa-sm"></i></span>.
                 Data can be filtered to show only houses or only flats/apartments, and searched by postcode.
@@ -115,11 +119,11 @@
       <div class='row pt-4 justify-content-center'>
         <div class='col-md-8'>
 
-          <center>
+          <div style="text-align: center;">
             <button id='HowItWorks' type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#myModal" style='font-size: 1.3em;'>
               How it works
             </button>
-          </center>
+          </div>
           
         </div>
       </div>
@@ -346,8 +350,31 @@
   
   <script type="text/javascript">
 
+    // Set the latest year-quarter for data files
+    const latest_data_quarter = '2024_Q4';
+
+    // Initialize tooltips once on DOM ready
+    $(function () {
+      $('[data-bs-toggle="tooltip"]').tooltip();
+    });
+
     $(document).ready(function () {
-      $('[data-bs-toggle="tooltip"]').tooltip()
+      var quarterToMonth = {
+        'Q1': 'March',
+        'Q2': 'June',
+        'Q3': 'September',
+        'Q4': 'December'
+      };
+      var match = latest_data_quarter.match(/^(\d{4})_Q([1-4])$/);
+      var text = '';
+      if (match) {
+        var year = match[1];
+        var quarter = 'Q' + match[2];
+        var month = quarterToMonth[quarter] || '';
+        text = month + ' ' + year;
+      }
+      var el = document.getElementById('latest-data-date');
+      if (el) el.textContent = text;
     });
 
     function showGarageGarden() {
@@ -360,11 +387,17 @@
     }
 
     function getPriceScalingFactor() {
-      // Reference date: March 2024
-      const refYear = 2024;
-      const refMonth = 2; // March is month 2 (0-based in JS)
+      // Parse latest_data_quarter, e.g. '2024_Q4'
+      const quarterToMonth = { Q1: 2, Q2: 5, Q3: 8, Q4: 11 }; // 0-based: Mar, Jun, Sep, Dec
+      const match = latest_data_quarter.match(/^(\d{4})_Q([1-4])$/);
+      let refYear = 2024, refMonth = 11; // fallback: Dec 2024
+      if (match) {
+        refYear = parseInt(match[1]);
+        refMonth = quarterToMonth['Q' + match[2]];
+      }
       const now = new Date();
       const monthsSinceRef = (now.getFullYear() - refYear) * 12 + (now.getMonth() - refMonth);
+      console.log('Updating prices for ', monthsSinceRef, 'months since reference date', refYear + '-' + (refMonth + 1));
       return Math.pow(1.02, monthsSinceRef / 12);
     }
     
@@ -476,23 +509,51 @@
         chunkedLoading: true,
       });
 
+      const price_scaling_factor = getPriceScalingFactor();
+
+      // Helper to get minimum radius based on zoom
+      function getMinRadius(zoom) {
+        // For zoom levels 14 and below (when clusters are active), use a minimum radius based on zoom level.
+        // This ensures circles are always visible at lower zoom levels, but also not larger than the clusters at any point.
+        // At 14,15,16, the floor of 30 will apply.
+        return Math.max(30, 240 / Math.pow(2, zoom - 10));
+      }
+
       const circles = data.map(row => {
+        // Scale values in popup_text
+        let popup = row.popup_text;
+        // Scale 'Mean value £121,572'
+        popup = popup.replace(/Mean value £([\d,]+)/, function(match, val) {
+          let scaled = Math.round(parseInt(val.replace(/,/g,'')) * price_scaling_factor);
+          return 'Mean value £' + scaled.toLocaleString();
+        });
+        // Scale '£311</b> per sq. m' (with optional <b> tag)
+        popup = popup.replace(/£([\d,]+)(<\/b>)? per sq\. m/, function(match, val, btag) {
+          let scaled = Math.round(parseInt(val.replace(/,/g,'')) * price_scaling_factor);
+          return '£' + scaled.toLocaleString() + (btag || '') + ' per sq. m';
+        });
+
+        // Set initial radius with minimum threshold
+        let mapZoom = map.getZoom ? map.getZoom() : 8;
+        let minRadius = getMinRadius(mapZoom);
+        let circleRadius = Math.max(radius, minRadius);
+
         var circle = L.circle([row.latitude, row.longitude], {
-          radius: radius, 
+          radius: circleRadius, 
           color: row.html_colour, 
           fillColor: row.html_colour,
           opacity: 1, 
           weight: 2,
           fillOpacity: 0.3,
         }).bindPopup(
-          row.popup_text
+          popup
         ).on(
           'mouseover', function(e) {
             e.target.setStyle({
               weight: 5,
               fillOpacity: 0.6
             }),
-            e.target.setRadius(radius*1.2)
+            e.target.setRadius(Math.max(radius*1.2, getMinRadius(map.getZoom())));
           }
         ).on(
           'mouseout', function(e) {
@@ -500,12 +561,22 @@
               weight: 2,
               fillOpacity: 0.3
             }),
-            e.target.setRadius(radius)
+            e.target.setRadius(Math.max(radius, getMinRadius(map.getZoom())));
           }
         );
-        circle['searchText'] = row.popup_text.split('</b>')[0].slice(3);
+        circle['searchText'] = popup.split('</b>')[0].slice(3);
         return circle;
       });
+
+      // Update all circle radii on zoom to maintain minimum size
+      map.on('zoomend', function() {
+        console.log('Zoom changed to', map.getZoom(), 'min radius is', getMinRadius(map.getZoom()));
+        let zoom = map.getZoom();
+        circles.forEach(function(circle) {
+          circle.setRadius(Math.max(radius, getMinRadius(zoom)));
+        });
+      });
+
       mcg.addLayers(circles);
       return mcg;
     }
@@ -886,7 +957,7 @@
         complete: function() {
           $('#loading').hide();
         },
-        url: './static/ppsqm_nge10_glmmethod_smoothed_alpha3000_2024_Q4.csv',
+        url: `./static/ppsqm_nge10_glmmethod_smoothed_alpha3000_${latest_data_quarter}.csv`,
         dataType: 'text',
         success: function(data) {
           allpts_data = Papa.parse(data, {
@@ -949,7 +1020,7 @@
       });
 
       // colour bands
-      Papa.parse('./static/colour_bands_ppsqm_nge10_glmmethod_2024_Q4.csv', {
+      Papa.parse(`./static/colour_bands_ppsqm_nge10_glmmethod_${latest_data_quarter}.csv`, {
         header: true, download: true, dynamicTyping: true,
         complete: function(results) {
           colour_bands_glmmethod = results.data.slice(0,-1).reverse();
@@ -963,7 +1034,7 @@
           legend.addTo(map);
         }
       });
-      Papa.parse('./static/colour_bands_ppsqm_nge10_LSOAglmmethod_2024_Q4.csv', {
+      Papa.parse(`./static/colour_bands_ppsqm_nge10_LSOAglmmethod_${latest_data_quarter}.csv`, {
         header: true, download: true, dynamicTyping: true,
         complete: function(results) {
           colour_bands_soas = results.data.slice(0,-1).reverse();
@@ -971,7 +1042,7 @@
       });
 
       //Geojson layer for SOA
-      $.get('./static/ppsqm_nge10_LSOAglmmethod_2024_Q4.json', function(geojsonString) {
+      $.get(`./static/ppsqm_nge10_LSOAglmmethod_${latest_data_quarter}.json`, function(geojsonString) {
         props_gj = L.geoJson(geojsonString, {
           style: function (feature) {
             return {
@@ -988,7 +1059,7 @@
       });
 
       // calculator coefficients
-      Papa.parse('./static/calculator_coefs_houses_smoothed_alpha3000_2024_Q4.csv', {
+      Papa.parse(`./static/calculator_coefs_houses_smoothed_alpha3000_${latest_data_quarter}.csv`, {
         header: true,
         download: true,
         dynamicTyping: true,
@@ -996,7 +1067,7 @@
           calculator_coefs_houses = results.data.slice(0,-1);
         }
       });
-      Papa.parse('./static/calculator_coefs_flats_smoothed_alpha3000_2024_Q4.csv', {
+      Papa.parse(`./static/calculator_coefs_flats_smoothed_alpha3000_${latest_data_quarter}.csv`, {
         header: true,
         download: true,
         dynamicTyping: true,
