@@ -134,3 +134,8 @@ a:hover, a:focus {
 #loading p {
     font-size: 1.5rem;
 }
+
+.github-hover:hover {
+    color: #4078c0 !important;
+    transition: color 0.2s;
+}

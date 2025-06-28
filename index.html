@@ -6,14 +6,22 @@
   <meta 
     name="viewport" 
     content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>NI House Price Map</title>
+  <title>NI House Price Map | Northern Ireland Property Values & Affordability Calculator</title>
   <meta 
     name="description" 
-    content="A map of property values for Northern Ireland
-             showing affordability of each postcode and a 
-             calculator for estimating the typical price of
-             a house in any area.">
+    content="Interactive map of Northern Ireland property values by postcode. Compare house prices, affordability, and area desirability. Includes postcode lookup and price calculator for houses and flats.">
+  <meta name="keywords" content="Northern Ireland, house prices, property values, postcode map, affordability calculator, NI property, real estate, home prices, flats, houses, property map, price per square metre">
+  <meta name="author" content="David Mulholland">
   <meta name="theme-color" content="linen">
+  <meta property="og:title" content="NI House Price Map | Northern Ireland Property Values & Affordability Calculator">
+  <meta property="og:description" content="Explore property values and affordability across Northern Ireland with an interactive postcode map and price calculator.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.nihousepricemap.com/">
+  <meta property="og:image" content="https://www.nihousepricemap.com/static/dalle3_nihousepricemap_orangehousecartoon2.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NI House Price Map | Northern Ireland Property Values & Affordability Calculator">
+  <meta name="twitter:description" content="Explore property values and affordability across Northern Ireland with an interactive postcode map and price calculator.">
+  <meta name="twitter:image" content="https://www.nihousepricemap.com/static/dalle3_nihousepricemap_orangehousecartoon2.png">
   <link rel="apple-touch-icon" href="/static/dalle3_nihousepricemap_orangehousecartoon2_48x48.ico">
 
   <!-- Leaflet -->
@@ -45,8 +53,8 @@
   <link rel="shortcut icon" href="/static/dalle3_nihousepricemap_orangehousecartoon2_48x48.ico">
 
   <style>
-    .legend { text-align: left; line-height: 14px; color: #555; padding: 6px 8px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
-    .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; opacity: 0.7; }
+    .legend { text-align: left; line-height: 10px; color: #555; padding: 6px 8px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+    .legend i { width: 10px; height: 10px; float: left; margin-right: 8px; opacity: 0.7; }
   </style>
 </head>
 
@@ -55,22 +63,22 @@
   <!-- Sticky Navbar -->
   <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="#">NI Property Map</a>
+      <a class="navbar-brand fw-bold" href="#" aria-label="NI House Price Map home">NI House Price Map</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
         <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" href="#map">Map</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#AffordabilityCalculator">Affordability calculator</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#PostcodesLookup">Postcodes</a>
-          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="#map" aria-label="Jump to map">Map</a>
+            </li>
+            <li class="nav-item">
+            <a class="nav-link" href="#AffordabilityCalculator" aria-label="Jump to affordability calculator">Affordability calculator</a>
+            </li>
+            <li class="nav-item">
+            <a class="nav-link" href="#PostcodesLookup" aria-label="Jump to postcode lookup">Postcodes</a>
+            </li>
         </ul>
       </div>
     </div>
@@ -83,12 +91,12 @@
         <div class="col-md-10">
           <div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
             <div class="container-fluid py-2">
-              <h1 class="display-5 fw-bold">The Northern Ireland Property Value Map</h1>
+              <h1 class="display-5 fw-bold">The Property Value Map for Northern Ireland</h1>
               <p class="lead">The map shows the estimated <b>value added to a property, per square metre, by each postcode</b> in Northern Ireland.</p>
               <p>These are the differences in price that exist for properties of equal characteristics (type, size, garage, etc.), due to the relative desirability of different areas.</p>
               <p>
                 Prices are estimates for today using most recent data from <b id="latest-data-date"></b>.
-                Some postcodes are not present in the data due to an insufficient number of properties found in the Land &amp; Property Service (LPS) data (see <a href='#HowItWorks'><b>How it works</b></a>).
+                Some postcodes are not present in the data due to an insufficient number of properties found in the Land &amp; Property Service (LPS) data (see <a href='#HowItWorks' aria-label="Jump to How it Works box"><b>How it works</b></a>).
               </p>
               <p>The map data can be viewed by individual postcode, or with postcodes grouped together by government Super Output Areas (SOAs)
                 <span class='help-tooltip' title='A NISRA geography that divides Northern Ireland into 890 areas of approximately equal population' data-bs-toggle="tooltip"><i class="fas fa-question-circle fa-sm"></i></span>.
@@ -141,19 +149,19 @@
                         
               <h1>Data and modelling</h1>
 
-              <p>Property data, including 2005 valuations, are from <a href='https://www.finance-ni.gov.uk/topics/property-valuation/domestic-valuation' target='_blank'>Land & Property Services.</a> These values are updated to today using <a href='https://www.finance-ni.gov.uk/articles/northern-ireland-house-price-index' target='_blank'>NISRA's Northern Ireland House Price Index</a>, using separate factors for houses and flats/apartments, but only at the granularity of local government district (LGD) level. Price levels and the overall structure of the map represent today's market. However, small-scale patterns are based on 2005 data and may have changed slightly since then, where some areas have become more or less desirable within a district.</p>
+              <p>Property data, including 2005 valuations, are from <a href='https://www.finance-ni.gov.uk/topics/property-valuation/domestic-valuation' target='_blank' aria-label="Go to Finance NI Domestic Property Valuations">Land & Property Services.</a> These values are updated to today using <a href='https://www.finance-ni.gov.uk/articles/northern-ireland-house-price-index' aria-label='Go to Finance NI House Price Index' target='_blank'>NISRA's Northern Ireland House Price Index</a>, using separate factors for houses and flats/apartments, but only at the granularity of local government district (LGD) level. Price levels and the overall structure of the map represent today's market. However, small-scale patterns are based on 2005 data and may have changed slightly since then, where some areas have become more or less desirable within a district.</p>
                         
-              <p>Values for each postcode come from a <a href='https://github.com/viva-ronaldo/ni-house-prices/blob/main/3_process_LPS.py'>simple statistical model</a> of <b>price per square metre</b> dependent on property type, floor area, presence of garden or garage, and postcode, trained on the LPS data. A value is only calculated for postcodes with at least 10 properties in the LPS data, and a small spatial smoothing is applied, to reduce noise and give more weight to postcodes with more data.</p>
+              <p>Values for each postcode come from a <a href='https://github.com/viva-ronaldo/ni-house-prices/blob/main/3_process_LPS.py' aria-label="Link to the source code on Github">simple statistical model</a> of <b>price per square metre</b> dependent on property type, floor area, presence of garden or garage, and postcode, trained on the LPS data. A value is only calculated for postcodes with at least 10 properties in the LPS data, and a small spatial smoothing is applied, to reduce noise and give more weight to postcodes with more data.</p>
 
               <p>These postcode coefficients are what is shown in the map: they capture <b>the value of the area itself</b>, independent of the particular kinds of properties (size, etc.) that are found in the area.</p>
 
-              <p>Slightly simpler models, one each for houses and flats, are used for the Affordability Calculator. These models do not explicitly handle new builds, so a scaling of factor of 1.4 is applied to predicted prices in these cases. This captures quite well the premium that new build listings carry compared to resale properties; e.g., see <a href='https://news.twentyea.co.uk/blog/the-new-build-price-premium-how-much-more-will-we-pay-for-a-brand-new-property' target='_blank'>here</a>. When a short postcode is used in the calculator, the 70th percentile of the predictions for that short postcode is used, because often new builds are part of a new long postcode that becomes more desirable than the average for that short postcode.</p>
+              <p>Slightly simpler models, one each for houses and flats, are used for the Affordability Calculator. These models do not explicitly handle new builds, so a scaling of factor of 1.4 is applied to predicted prices in these cases. This captures quite well the premium that new build listings carry compared to resale properties; e.g., see <a href='https://news.twentyea.co.uk/blog/the-new-build-price-premium-how-much-more-will-we-pay-for-a-brand-new-property' aria-label='Visit supporting source' target='_blank'>here</a>. When a short postcode is used in the calculator, the 70th percentile of the predictions for that short postcode is used, because often new builds are part of a new long postcode that becomes more desirable than the average for that short postcode.</p>
 
-              <p>The processing and modelling code is available <a href="https://github.com/viva-ronaldo/ni-house-prices/">on GitHub</a>.</p>
+              <p>The processing and modelling code is available <a href="https://github.com/viva-ronaldo/ni-house-prices/" aria-label="Link to the source code on Github">on GitHub</a>.</p>
 
               <h1>Validation</h1>
               
-              <p>The primary purpose of the Price Map is to show the value of areas relative to each other, but for the Affordability Calculator to be useful, the price model must be accurately calibrated for recent asking prices. A sample of <b>sales listings</b> was obtained from <a href='https://www.propertynews.com/'>PropertyNews</a> in June 2024 and used to evaluate the calculator model's predictions). Floor area and presence of garden and garage were obtained by linking the properties to the LPS data, so these values may be outdated in some cases.</p>
+              <p>The primary purpose of the Price Map is to show the value of areas relative to each other, but for the Affordability Calculator to be useful, the price model must be accurately calibrated for recent asking prices. A sample of <b>sales listings</b> was obtained from <a href='https://www.propertynews.com/' aria-label="Visit Property News" target='_blank'>PropertyNews</a> in June 2024 and used to evaluate the calculator model's predictions. Floor area and presence of garden and garage were obtained by linking the properties to the LPS data, so these values may be outdated in some cases.</p>
 
               <img src='static/propertynews_validation_calculator_preds_plot_20240622.png' class='modal-plot' style='width: 90%'>
 
@@ -203,7 +211,7 @@
                   </div>
 
                   <div class="col-6">
-                    <input type="text" class="form-control" id="calc_postcode" name='calc_postcode' placeholder="Enter postcode, half or full"  required>
+                    <input type="text" class="form-control" id="calc_postcode" name='calc_postcode' placeholder="e.g., 'BT78' or 'BT78 3QJ'"  required>
                     <div class="invalid-feedback">Please provide a valid postcode.</div>
                   </div>
                 </div>
@@ -263,52 +271,50 @@
       <div class='row my-4 justify-content-center'>
         <div class='col-md-10'>
 
-            <div class="row no-gutters border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
+          <div class="row no-gutters border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
             <div class="col py-4 px-4 d-flex flex-column position-static postcode_table_box" id="PostcodesLookup">
               <h2>Postcode lookup</h2>
 
               <p>
-              Use the <b>Search</b> box to filter by postcode or area (SOA). 
-              Press <kbd>Enter</kbd> to apply your filter. 
-              Click column headers to sort.
+                Use the <b>Search</b> box to filter by postcode or area (SOA). 
+                Press <kbd>Enter</kbd> to apply your filter. 
+                Click column headers to sort.
               </p>
-              <p>
-              Only postcodes with at least 10 domestic properties (house or flat) in the LPS data are shown.
-              </p>
+              <p>Only postcodes with at least 10 domestic properties (house or flat) in the LPS data are shown.</p>
               
               <div class='row justify-content-center'>
-              <div class='col-12 col-lg-10'>
-              <div class="table-responsive" style="border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 12px; background: #fff;">
-              <table id="postcodes-all-table" class="table table-striped table-bordered mb-0" style='width: 100%; font-size: 0.95em; border-radius: 6px; overflow: hidden;'>
-                <thead class="table-light">
-                <tr>
-                <th>Postcode</th>
-                <th>Average size</th>
-                <th>Average price</th>
-                <th>Price per sq. m compared to average</th>
-                </tr>
-                </thead>
-              </table>
-              </div>
-              </div>
+                <div class='col-12 col-lg-10'>
+                  <div class="table-responsive" style="border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 12px; background: #fff;">
+                    <table id="postcodes-all-table" class="table table-striped table-bordered mb-0" style='width: 100%; font-size: 0.95em; border-radius: 6px; overflow: hidden;'>
+                      <thead class="table-light">
+                      <tr>
+                      <th>Postcode</th>
+                      <th>Average size</th>
+                      <th>Average price</th>
+                      <th>Price per sq. m compared to average</th>
+                      </tr>
+                      </thead>
+                    </table>
+                  </div>
+                </div>
               </div>
 
             </div>
-            </div>
+          </div>
 
         </div>
       </div>
 
     </div>
 
-    <footer>
+    <footer style="border-top: px solid #e5e5e5; background: #faf7f2;">
       <div class="container-fluid">
         <div class="row justify-content-center" style="font-size: 0.7em">
-          <div class="col-12 text-center">
+          <div class="col-12 text-center pt-2 pb-1">
             <p>
-              © 2024-2025 David Mulholland.
-              <a href="https://github.com/viva-ronaldo/ni-house-prices" target="_blank" title="View source on GitHub" style="margin-left: 10px;">
-                <i class="fab fa-github" style="font-size: 1.2em; vertical-align: middle; color: #000;"></i>
+              © 2024-2025 David Mulholland
+              <a href="https://github.com/viva-ronaldo/ni-house-prices" target="_blank" title="View source on GitHub" aria-label="View source on GitHub" style="margin-left: 10px;">
+                <i class="fab fa-github github-hover" style="font-size: 1.2em; vertical-align: middle; color: #000;"></i>
               </a>
             </p>
           </div>
@@ -412,12 +418,12 @@
 
     let osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       osm = L.tileLayer(osmUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" aria-label="Visit Open Street Map">OpenStreetMap</a> contributors',
         opacity: 0.5
       }), 
       cartoUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', 
       CartoDB_Positron = L.tileLayer(cartoUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        attribution: '&copy; <a href="https://carto.com/attributions" aria-label="Visit CARTO">CARTO</a>',
         subdomains: 'abcd'
       });
 
@@ -916,29 +922,36 @@
         }
       }
 
+      $('html, body').animate({
+        scrollTop: $('#calc_output_1').offset().top - 10
+      }, 600);
+
       return false;
     }
 
     // Legend changes
     function get_legend_label_from_colour_bands_array(o, index, arr) {
-      var lab = '<i style="background: ' + o.html_colour + '"></i>'
+      var lab = '<i style="background: ' + o.html_colour + '"></i>';
       if (index == 0) {
-        //Make sure using .reverse on values at read in
-        lab += 'Highest 10%'
+        lab += 'Most';
+      } else if (index == 1) {
+        lab += 'expensive'
       } else if (arr.length == 7 && index == 3) {
-        lab += 'Average'
+        lab += 'Average';
+      } else if (index == arr.length-2) {
+        lab += 'Least';
       } else if (index == arr.length-1) {
-        lab += 'Lowest 10%'
-      } 
+        lab += 'expensive';
+      }
       return lab;
     }
     map.on('baselayerchange', function(e) { 
       if (e.name == 'SOAs') {
-        var new_labels = colour_bands_soas.map(get_legend_label_from_colour_bands_array);
-        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      var new_labels = colour_bands_soas.map(get_legend_label_from_colour_bands_array);
+      $('.legend')[0].innerHTML = new_labels.join('<br>');
       } else if (e.name == 'Postcodes') {
-        var new_labels = colour_bands_glmmethod.map(get_legend_label_from_colour_bands_array);
-        $('.legend')[0].innerHTML = new_labels.join('<br>');
+      var new_labels = colour_bands_glmmethod.map(get_legend_label_from_colour_bands_array);
+      $('.legend')[0].innerHTML = new_labels.join('<br>');
       }
     });
 
