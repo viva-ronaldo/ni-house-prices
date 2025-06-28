@@ -397,7 +397,6 @@
       }
       const now = new Date();
       const monthsSinceRef = (now.getFullYear() - refYear) * 12 + (now.getMonth() - refMonth);
-      console.log('Updating prices for ', monthsSinceRef, 'months since reference date', refYear + '-' + (refMonth + 1));
       return Math.pow(1.02, monthsSinceRef / 12);
     }
     
@@ -465,9 +464,6 @@
       } else {
         data = csvString;
       }
-      //console.log(data);
-      //TODO change popup text values
-      //"<b>BT1 1GJ</b><br/>Mean value £121,572<br/><b>£311</b> per sq. m <span style='color: #4b1e7a'><b>above</b></span> average"
 
       var mcg = L.markerClusterGroup({
         showCoverageOnHover: false,
@@ -570,7 +566,6 @@
 
       // Update all circle radii on zoom to maintain minimum size
       map.on('zoomend', function() {
-        console.log('Zoom changed to', map.getZoom(), 'min radius is', getMinRadius(map.getZoom()));
         let zoom = map.getZoom();
         circles.forEach(function(circle) {
           circle.setRadius(Math.max(radius, getMinRadius(zoom)));
