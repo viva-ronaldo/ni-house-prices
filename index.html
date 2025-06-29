@@ -115,7 +115,12 @@
 
       <div id="loading" style="text-align: center;">
         <img src="static/dalle3_nihousepricemap_orangehousecartoon2.png" alt="Loading..." />
-        <p>Loading the map, one moment...</p>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);">
+            <div class="spinner-border" role="status" style="width: 4.5rem; height: 4.5rem; color: black; animation-duration: 1.2s;">
+            <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <p>Loading the map - one moment...</p>
       </div>
 
       <div class='row pb-2 justify-content-center'>
@@ -277,7 +282,7 @@
 
               <p>
                 Use the <b>Search</b> box to filter by postcode or area (SOA). 
-                Press <kbd>Enter</kbd> to apply your filter. 
+                Press <b>Enter</b> to apply your filter. 
                 Click column headers to sort.
               </p>
               <p>Only postcodes with at least 10 domestic properties (house or flat) in the LPS data are shown.</p>
@@ -524,12 +529,10 @@
       const circles = data.map(row => {
         // Scale values in popup_text
         let popup = row.popup_text;
-        // Scale 'Mean value £121,572'
         popup = popup.replace(/Mean value £([\d,]+)/, function(match, val) {
           let scaled = Math.round(parseInt(val.replace(/,/g,'')) * price_scaling_factor);
           return 'Mean value £' + scaled.toLocaleString();
         });
-        // Scale '£311</b> per sq. m' (with optional <b> tag)
         popup = popup.replace(/£([\d,]+)(<\/b>)? per sq\. m/, function(match, val, btag) {
           let scaled = Math.round(parseInt(val.replace(/,/g,'')) * price_scaling_factor);
           return '£' + scaled.toLocaleString() + (btag || '') + ' per sq. m';
@@ -963,7 +966,7 @@
           $('#loading').show();
         },
         complete: function() {
-          $('#loading').hide();
+          $('#loading').fadeOut(1200);
         },
         url: `./static/ppsqm_nge10_glmmethod_smoothed_alpha3000_${latest_data_quarter}.csv`,
         dataType: 'text',
