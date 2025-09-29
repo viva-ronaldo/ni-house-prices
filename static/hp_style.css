@@ -11,6 +11,10 @@ body {
     background-color: linen;
 }
 
+h1 {
+    font-size: 2.2em !important;
+}
+
 a {
     color: royalblue;
     text-decoration: none;
@@ -18,7 +22,7 @@ a {
 a:hover, a:focus {
     color: plum;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: color 0.3s;
 }
 
 .help-tooltip {
@@ -28,10 +32,19 @@ a:hover, a:focus {
     color: chocolate;
 }
 .tooltip > .tooltip-inner {
+    max-width: 350px !important;
+    text-align: left !important;
+    white-space: normal !important;
+    padding: 12px 16px;
     background-color: #d2e4f0;
     color: black; 
     border: 1px solid black; 
     font-size: 1.1em;
+}
+.tooltip-inner ul, .tooltip-inner li {
+    text-align: left !important;
+    margin-left: 1.2em;
+    padding-left: 0;
 }
 
 @media screen and (max-width: 450px) {
@@ -41,12 +54,17 @@ a:hover, a:focus {
 }
 
 .legend {
-    line-height: 18px;
+    line-height: 10px;
     color: #555;
+    text-align: left;
+    padding: 6px 8px;
+    background: white;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
 }
 .legend i {
-    width: 18px;
-    height: 18px;
+    width: 10px;
+    height: 10px;
     float: left;
     margin-right: 8px;
     opacity: 0.7;
@@ -72,7 +90,7 @@ a:hover, a:focus {
     background-color: #ffdfbf;
 }
 .postcode_table_box {
-    background-color: #d2e4f0;
+    background-color: #f3e6ff;
 }
 
 .btn-info, .btn-info:hover, .btn-info:active, .btn-info:visited {
@@ -90,18 +108,18 @@ a:hover, a:focus {
     border-color: #fb9a99;
 }
 .active > .page-link, .page-link.active {
-    background-color: #1f78b4;
-    border-color: #1f78b4;
+    background-color: #a473ab;
+    border-color: #a473ab;
 }
-.page-link {
-    color: #1f78b4;
+.page-link, .page-link:hover, .page-link:focus {
+    color: #5a338b;
 }
 
 #loading {
     position: fixed;
     width: 100%;
-    height: 60%;
-    top: 10%;
+    height: 100vh;
+    top: 0;
     left: 0;
     background-color: rgba(252,252,236,0.9);
     z-index: 1100;
@@ -109,9 +127,18 @@ a:hover, a:focus {
     justify-content: center;
     display: flex;
     flex-direction: column;
+    padding-bottom: 0;
+    transition: opacity 0.7s;
+    opacity: 1;
+}
+#loading.fade-out {
+    opacity: 0;
+    pointer-events: none;
 }
 #loading img {
     width: 280px;
+    max-width: 80vw;
+    height: auto;
     animation: fadeIn 1500ms;
 }
 @keyframes fadeIn {
@@ -120,4 +147,19 @@ a:hover, a:focus {
 }
 #loading p {
     font-size: 1.5rem;
+}
+
+@media screen and (max-width: 450px) {
+    #loading {
+        padding-bottom: 80px;
+    }
+}
+
+.github-hover:hover {
+    color: #4078c0 !important;
+    transition: color 0.2s;
+}
+
+div.dataTables_info {
+    font-size: 0.85em;
 }
