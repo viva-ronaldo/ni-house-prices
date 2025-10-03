@@ -211,7 +211,7 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
             postcodes_batch = [p.split('_')[1] for p in postcode_cols_batch]
             
             train_batch = df[df.Postcode.isin(postcodes_batch)]
-            train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['Postcode'], prefix='postcode', sparse=True)], axis=1)
+            train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['Postcode'], prefix='postcode', dtype=int)], axis=1)
             # for formula method
             train_batch = train_batch.rename(columns = {c: c.replace(' ', 'SPACE') for c in postcode_cols_batch})
 
@@ -237,6 +237,8 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
         .join(pd.concat([g.params for g in glm_res[1]]).filter(like='postcode').to_frame(name='coef_2'))
         .join(pd.concat([g.params for g in glm_res[2]]).filter(like='postcode').to_frame(name='coef_3'))
     )
+    # In newer versions of statsmodels the postcode terms get a [T.True] appended which must be removed
+    pc_coefs.index = [re.sub(r'\[T\.True\]$', '', s) for s in pc_coefs.index]
     pc_coefs['pc_coef_avg'] = (pc_coefs.coef_1 + pc_coefs.coef_2 + pc_coefs.coef_3) / 3
     
     pc_coef_serrors = (
@@ -245,6 +247,8 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
         .join(pd.concat([g.bse for g in glm_res[2]]).filter(like='postcode').to_frame(name='coef_se_3'))
     )
     pc_coef_serrors['pc_coef_se_avg'] = (pc_coef_serrors.coef_se_1 + pc_coef_serrors.coef_se_2 + pc_coef_serrors.coef_se_3) / 3
+    # Remove [T.True]s
+    pc_coef_serrors.index = [re.sub(r'\[T\.True\]$', '', s) for s in pc_coef_serrors.index]
     pc_coefs = pc_coefs.join(pc_coef_serrors)
 
     pc_coefs['postcode'] = [s.split('_')[-1].replace('SPACE', ' ') for s in pc_coefs.index]
@@ -290,7 +294,7 @@ def calculate_glm_coefs_by_LSOA(df, formula_minus_lsoas, min_properties_per_lsoa
         lsoa_batch = [p.split('_')[1] for p in lsoa_cols_batch]
 
         train_batch = df[df['LSOA Code'].isin(lsoa_batch)]
-        train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['LSOA Code'], prefix='lsoa', sparse=True)], axis=1)
+        train_batch = pd.concat([train_batch, pd.get_dummies(train_batch['LSOA Code'], prefix='lsoa', dtype=int)], axis=1)
 
         # New formula method
         full_formula = formula_minus_lsoas + ' + ' + ' + '.join(lsoa_cols_batch)
@@ -398,8 +402,8 @@ def summarise_coefs(houses, coefs_df, soas, region_type='Postcode', suffix='', c
 
     summ_coefs = (houses.groupby(group_keys, as_index=False).agg(
         n_properties = ('value', len),
-        longitude = ('Longitude', np.max), # there is only one value per postcode so any agg will do
-        latitude = ('Latitude', np.max),
+        longitude = ('Longitude', 'max'), # there is only one value per postcode so any agg will do
+        latitude = ('Latitude', 'max'),
         mean_val = ('value_current_by_lgd', lambda v: round(np.mean(v))),
         mean_size = ('area_m2', lambda a: round(np.mean(a))),
         mean_price_per_sq_m = ('price_per_sq_m_current_by_lgd', lambda p: round(np.mean(p)))
@@ -457,8 +461,8 @@ def summ_values_by_postcode(summ_coefs_for_calculator, postcode_column):
     """ Aggregate a set of coefficients by a geography column `postcode_column`, e.g., short postcode """
     res = (summ_coefs_for_calculator.groupby(postcode_column, as_index=False).agg(
         value_mean = ('ppsqm_delta', lambda v: np.round(np.mean(v), 4)),
-        value_lower = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.05]), 4)),
-        value_upper = ('ppsqm_delta', lambda x: np.round(np.quantile(x, [0.95]), 4))
+        value_lower = ('ppsqm_delta', lambda x: np.round(np.quantile(x, 0.05), 4)),
+        value_upper = ('ppsqm_delta', lambda x: np.round(np.quantile(x, 0.95), 4))
         )
         .rename(columns={postcode_column: 'coef'})
     )

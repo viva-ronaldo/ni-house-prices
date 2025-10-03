@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import gc, glob, re
+import argparse
 
 from process_LPS_functions import (
     read_nihpi_api_nationwide,
@@ -32,8 +33,13 @@ from process_LPS_functions import (
     save_nearest_five_postcode_files,
 )
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--factors_only', action='store_true', help='Only calculate the price change factors and save the processed LPS data')
+args = parser.parse_args()
+factors_only = args.factors_only
+
 use_nihpi_api = False  # API is not updating as of Q3 2024
-recent_price_quarter = 'Q4 2024'  # use latest quarter if use_nihpi_api = True, otherwise use this quarter in pre-downloaded data
+recent_price_quarter = 'Q2 2025'  # use latest quarter if use_nihpi_api = True, otherwise use this quarter in pre-downloaded data
 refresh_nearest_five_postcodes = False  # make true if the LPS data ever change (new postcodes added)
 
 min_properties_per_postcode = 10
@@ -110,6 +116,9 @@ houses['value_current_by_nw'] = np.where(
     houses.value * price_change_2005_to_current_nw_apts)
 houses['price_per_sq_m_current_by_nw'] = houses.value_current_by_nw / houses.area_m2
 
+if factors_only:
+    exit()
+
 # By LGD
 price_changes_2005_to_current_lgd = price_changes_lgd.loc[recent_price_quarter] / (price_changes_lgd.loc['Q1 2005'] / Q42004_TO_Q12005_FACTOR)
 price_changes_2005_to_current_lgd.index = [
@@ -150,12 +159,12 @@ houses = houses.join(
 houses['price_per_sq_m_current_by_lgd'] = houses.value_current_by_lgd / houses.area_m2
 
 print(f'Filling in {houses.price_per_sq_m_current_by_lgd.isnull().mean()*100:.1f}% current values with nw due to missing LGD value')
-houses['value_current_by_lgd'].fillna(houses.value_current_by_nw, inplace=True)
-houses['price_per_sq_m_current_by_lgd'].fillna(houses.price_per_sq_m_current_by_nw, inplace=True)
+houses['value_current_by_lgd'] = houses['value_current_by_lgd'].fillna(houses.value_current_by_nw)
+houses['price_per_sq_m_current_by_lgd'] = houses['price_per_sq_m_current_by_lgd'].fillna(houses.price_per_sq_m_current_by_nw)
 
 print('Finally, prices from 2005 to now have been scaled by:\n\n', houses.groupby('home_type').agg(
-    mean_price_2005 = ('price_per_sq_m', np.mean), 
-    mean_price_current = ('price_per_sq_m_current_by_lgd', np.mean)))
+    mean_price_2005 = ('price_per_sq_m', 'mean'), 
+    mean_price_current = ('price_per_sq_m_current_by_lgd', 'mean')))
 
 del lgd_geom, price_changes_2005_to_current_lgd
 
@@ -183,9 +192,10 @@ houses = houses.drop(columns=['address', 'lgd', 'desc', 'type',
     'price_per_sq_m',
     'has_garage', 'has_other_outbuilding', 'has_garden', 'has_yard',
     'price_per_sq_m_current_by_nw', 'value_current_by_nw'])
+print(houses.columns)
 
 #Save out for analysis, without geometry
-houses.drop(columns=['geometry']).to_csv(processed_lps_data_path, index=False)
+houses.drop(columns=['geometry'], errors='ignore').to_csv(processed_lps_data_path, index=False)
 
 # ---- Fit models ----
 

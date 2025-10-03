@@ -161,11 +161,11 @@
 
               <h1>Validation</h1>
               
-              <p>The primary purpose of the Price Map is to show the value of areas relative to each other, but for the Affordability Calculator to be useful, the price model must be accurately calibrated for recent asking prices. A sample of <b>sales listings</b> was obtained from <a href='https://www.propertynews.com/' aria-label="Visit Property News" target='_blank'>PropertyNews</a> in June 2024 and used to evaluate the calculator model's predictions. Floor area and presence of garden and garage were obtained by linking the properties to the LPS data, so these values may be outdated in some cases.</p>
+              <p>The primary purpose of the Price Map is to show the value of areas relative to each other, but for the Affordability Calculator to be useful, the price model must be accurately calibrated for recent asking prices. A sample of <b>sales listings</b> was obtained from <a href='https://www.propertynews.com/' aria-label="Visit Property News" target='_blank'>PropertyNews</a> in October 2025 and used to evaluate the calculator model's predictions. Floor area and presence of garden and garage were obtained by linking the properties to the LPS data, so these values may be outdated in some cases.</p>
 
-              <img src='static/propertynews_validation_calculator_preds_plot_20240622.png' class='modal-plot' style='width: 90%'>
+              <img src='static/propertynews_validation_calculator_preds_plot_20251003.png' class='modal-plot' style='width: 90%'>
 
-              <p>The plot above shows predicted prices for the sample of properties against their actual listed price. Predictions are evenly spread across the 1:1 line, indicating that predicted prices are well-calibrated (not consistently too high or too low). The mean absolute error for this sample is <b>£32,000</b>, and the mean absolute percentage error is <b>17%</b>, which indicates the accuracy of the calculator: for each calculator prediction, an actual property in the postcode could be considerably more or less expensive, depending on details particular to that property - number of bedrooms, quality of fittings, and so on - that are not considered by the calculator.</p>
+              <p>The plot above shows predicted prices for the sample of properties against their actual listed price. Predictions are evenly spread across the 1:1 line, indicating that predicted prices are well-calibrated (not consistently too high or too low). The mean absolute error for this sample is <b>£34,000</b>, and the mean absolute percentage error is <b>14%</b>, which indicates the accuracy of the calculator: for each calculator prediction, an actual property in the postcode could be considerably more or less expensive, depending on details particular to that property - number of bedrooms, quality of fittings, and so on - that are not considered by the calculator.</p>
 
               <p>The aim here is not to create the most accurate price model possible. The affordability calculator only indicates <i>the price of a typical property of a given size in each postcode</i>. The plot above does show, however, that the price model performs reasonably well at separating postcodes by property value, and is well calibrated for current prices.</p>
             </div>
@@ -361,7 +361,7 @@
   <script type="text/javascript">
 
     // Set the latest year-quarter for data files
-    const latest_data_quarter = '2024_Q4';
+    const latest_data_quarter = '2025_Q2';
 
     // Initialize tooltips once on DOM ready
     $(function () {
