@@ -11,17 +11,20 @@ library(ggthemes)
 
 setwd('~/projects/ni-house-prices/')
 
+processed_data_path <- '/media/shared_storage/data/ni-house-prices_data/other_data/'
+latest_quarter <- '2025_Q2'
+latest_quarter_print <- sub('_', '', latest_quarter)
 new_build_factor <- 1.4
 #New build maybe increases raw ppsqm by 25%.
 #Boof: https://news.twentyea.co.uk/blog/the-new-build-price-premium-how-much-more-will-we-pay-for-a-brand-new-property
 #    They say 25% premium; 10-50% by region.
 #1.5 is about right to match both SB and TR prices
 
-coefs <- read.csv('static/calculator_coefs_smoothed_alpha3000.csv')  # doesn't exist from June 2024; flats, houses separate
+coefs <- read.csv(sprintf('static/calculator_coefs_smoothed_alpha3000_%s.csv', latest_quarter))  # doesn't exist from June 2024; flats, houses separate
 coefs_postcodes <- subset(coefs, grepl('BT',coef))
 coefs <- subset(coefs, !grepl('BT', coef))
 
-lps_vals_2024 <- read.csv('/media/shared_storage/data/ni-house-prices_data/other_data/processed_LPS_valuations.csv')
+lps_vals_latest <- read.csv(file.path(processed_data_path,sprintf('processed_LPS_valuations_%s.csv', latest_quarter)))
 # These are scaled to recent_price_quarter from 3_process_LPS.py the last time it was run
 
 # BELOW ASSUMES THE OLD COEFS FORMAT
@@ -310,7 +313,7 @@ coefs_houses <- subset(coefs_houses, !grepl('BT', coef))
 
 
 # Look at linearity vs area - might be compromising the 100-300k range and getting higher values good?
-lps_vals_2024 %>% group_by(area_grp = ntile(area_m2, 20)) %>% mutate(mean_area = mean(area_m2)) %>% ungroup() %>%
+lps_vals_latest %>% group_by(area_grp = ntile(area_m2, 20)) %>% mutate(mean_area = mean(area_m2)) %>% ungroup() %>%
     ggplot() + geom_boxplot(aes(mean_area, value_current_by_lgd, group=mean_area),
                             outlier.size=0.3, outlier.alpha=0.5) +
     geom_smooth(aes(mean_area, value_current_by_lgd), se=FALSE, method='lm', colour='coral') +
@@ -322,7 +325,7 @@ lps_vals_2024 %>% group_by(area_grp = ntile(area_m2, 20)) %>% mutate(mean_area =
 #   so we would expect higher than linear values.
 
 # Plot ppsqm instead; centile bins separately by house and flat
-lps_vals_2024 %>% 
+lps_vals_latest %>% 
     filter(area_m2 <= 160) %>%
     mutate(home_type = factor(home_type, levels=c('House','Flat'), labels=c('Houses','Apartments'))) %>%
     group_by(home_type) %>% mutate(area_grp = ntile(area_m2, 15)) %>% ungroup() %>%
@@ -336,14 +339,14 @@ lps_vals_2024 %>%
     labs(x=expression('Floor area (m'^'2'*')'), y=expression('Price per square metre (£/m'^'2'*')'),
          title='NI property values increase linearly with floor area, but not at the low end',
          #subtitle=atop(expression('LPS values scaled to 2024Q1; values binned in 15 quantiles separately by property type;\nplot is limited to areas < 160m'^'2'*' and ppsqm < 2500 £/m'^'2'*'.')) +
-         subtitle=expression('LPS values scaled to 2024Q1; values binned in 15 quantiles separately by property type; plot is limited to areas < 160m'^'2'*' and ppsqm < 2500 £/m'^'2')) +
+         subtitle=expression('LPS values scaled to 2025Q2; values binned in 15 quantiles separately by property type; plot is limited to areas < 160m'^'2'*' and ppsqm < 2500 £/m'^'2')) +
     theme_minimal() +
     theme(strip.text = element_text(size=12), strip.background = element_rect(fill='#f9d2f9'),
           plot.subtitle = element_text(size=7),
           panel.grid.minor = element_blank(),
           panel.spacing.x = unit(10,'mm'))
 # ** PLOT **
-ggsave('pictures/lps_scaled_2024Q4_ppsqmvs_vs_area15ntile_boxplot_houseaptfacet.png', width=7.5, height=5)
+ggsave(sprintf('pictures/lps_scaled_%s_ppsqmvs_vs_area15ntile_boxplot_houseaptfacet.png', latest_quarter_print), width=7.5, height=5)
 
 lps_vals_2024 %>% 
     filter(area_m2 <= 200, home_type=='House') %>% 

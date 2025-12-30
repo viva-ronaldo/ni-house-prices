@@ -19,6 +19,7 @@ import pandas as pd
 import geopandas as gpd
 import gc, glob, re
 import argparse
+import pandera as pa
 
 from process_LPS_functions import (
     read_nihpi_api_nationwide,
@@ -31,6 +32,8 @@ from process_LPS_functions import (
     save_colour_bands_file,
     combine_coefs_for_calculator,
     save_nearest_five_postcode_files,
+    validate_nihpi_dataframes,
+    validate_houses_dataframe,
 )
 
 parser = argparse.ArgumentParser()
@@ -90,11 +93,18 @@ soas = (
 )
 soas['SOA_LABEL'] = soas.SOA_LABEL.apply(lambda l: l.replace('_',' '))
 
+# Validate data
+price_changes_nw, price_changes_lgd = validate_nihpi_dataframes(
+    price_changes_nw, price_changes_lgd, recent_price_quarter
+)
+
 # --- Prepare houses data ---
 
 lps_files = glob.glob(f'{house_price_data_dir}/LPS_data/lps_valuations_*_*.csv')
 postcodes_file = f'{house_price_data_dir}/other_data/full_postcode_latlons_from_doogal.csv'
 houses = load_and_filter_LPS_houses_data(lps_files, postcodes_file)
+
+houses = validate_houses_dataframe(houses)
 
 #Get price change factors from 2005 to current
 

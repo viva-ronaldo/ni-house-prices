@@ -25,10 +25,14 @@ library(tidyr)
 library(ggrepel)
 library(cowplot)
 
+lps_data_path <- '/media/shared_storage/data/ni-house-prices_data/LPS_data/'
+processed_data_path <- '/media/shared_storage/data/ni-house-prices_data/other_data/'
+latest_quarter <- 'q2-2025'
+
 #i) Relative moves of LGD prices ----
 
-lgd_wide <- read.csv('/media/shared_storage/data/ni-house-prices_data/other_data/standardised-price-and-index-by-lgd-q1-2005---q4-2024.csv')
-lgd_by_type_wide <- read.csv('/media/shared_storage/data/ni-house-prices_data/other_data/ni-hpi-by-property-type-q1-2005---q4-2024.csv')
+lgd_wide <- read.csv(file.path(processed_data_path, sprintf('standardised-price-and-index-by-lgd-q1-2005---%s.csv', latest_quarter)))
+lgd_by_type_wide <- read.csv(file.path(processed_data_path, sprintf('ni-hpi-by-property-type-q1-2005---%s.csv', latest_quarter)))
 
 # rel_value is the value of an LGD relative to the mean of all LGDs (should be size weighted?)
 lgd <- lgd_wide %>% select(Quarter_Year, ends_with('Price')) %>% 
@@ -115,7 +119,7 @@ p1 <- lgd_by_type %>%
     annotate('label', x=parse_date_time('2022-01','%Y-%m'), y=1.50, label='Houses', colour='dodgerblue', size=2) +
     guides(colour='none') +
     theme_light() + 
-    theme(legend.position=c(0.6,0.8), axis.text = element_text(size=8),
+    theme(legend.position.inside=c(0.6,0.8), axis.text = element_text(size=8),
           panel.grid.minor = element_blank(), panel.grid.major.x=element_blank())
 #plot_grid(p1, p2, labels = c("A", "B"), scale=c(0.7,1))
 plot_grid(
@@ -127,11 +131,10 @@ plot_grid(
     ncol=2, rel_widths=c(0.4,0.6)
 )
 # ** PLOT **
-#ggsave('pictures/nihpi_to2024q1_series_2panel_housevsapt_lgdsrelative.png', width=7, height=4)
-ggsave('pictures/nihpi_to2024q4_series_2panel_housevsapt_lgdsrelative.png', width=7, height=4)
+ggsave(sprintf('pictures/nihpi_to_%s_series_2panel_housevsapt_lgdsrelative.png', latest_quarter), width=7, height=4)
 
 #ii) Changes in LGD housing stock ----
-stock <- read.csv('/media/shared_storage/data/ni-house-prices_data/other_data/ni-housing-stock-by-lgd-2008---2022.csv', check.names = FALSE) %>%
+stock <- read.csv(file.path(processed_data_path, 'ni-housing-stock-by-lgd-2008---2022.csv'), check.names = FALSE) %>%
     filter(`District Council`!='') %>% 
     pivot_longer(cols=ends_with('Stock'), names_to='year')
 inner_join(stock %>% filter(year=='2008 Housing Stock') %>% select(`District Council`, value_1=value),
@@ -163,7 +166,7 @@ inner_join(stock %>% filter(year=='2008 Housing Stock') %>% select(`District Cou
 
 #iii) LPS valuation analysis ----
 
-lps_valuation_files <- Sys.glob('/media/shared_storage/data/ni-house-prices_data/LPS_data/lps_valuations*csv')
+lps_valuation_files <- Sys.glob(file.path(lps_data_path, 'lps_valuations*csv'))
 
 lps_sample <- lapply(lps_valuation_files %>% sample(200, replace=FALSE), read.csv) %>% bind_rows() %>%
     filter(area_m2 < 1000)

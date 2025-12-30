@@ -6,6 +6,8 @@ import statsmodels.formula.api as smf
 from matplotlib import colors, cm
 from collections import namedtuple
 from itertools import chain
+import pandera.pandas as pa
+from typing import Tuple
 
 def read_nihpi_api_nationwide():
     """ Read the latest NIHPI series at nationwide level from the ODNI API """
@@ -139,6 +141,9 @@ def load_and_filter_LPS_houses_data(lps_files,
 
     print(f'  and {houses[houses.price_per_sq_m <= 200].shape[0]} rows with ppsqm < £200/m^2')
     houses = houses[houses.price_per_sq_m > 200].copy()
+
+    print(f'  and {houses[houses.price_per_sq_m > 10000].shape[0]} rows with ppsqm < 10,000/m^2')
+    houses = houses[houses.price_per_sq_m <= 10000].copy()
 
     #A few more look dodgy in size and/or value, or may be a non-house
     bad_ids = [
@@ -538,3 +543,120 @@ def save_nearest_five_postcode_files(
      .query('(postcode in @comb_coefs_calculator_houses.coef) | (postcode in @comb_coefs_calculator_flats.coef)')
      .to_csv(postcodelongtoshort_nearest_five_path, index=False)
     )
+
+def validate_nihpi_dataframes(
+    price_changes_nw: pd.DataFrame,
+    price_changes_lgd: pd.DataFrame,
+    recent_price_quarter: str
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Validate the NIHPI dataframes using pandera and return the validated copies.
+
+    Raises ValueError if validation fails (wraps pandera errors for a clearer message).
+    """
+    schema_nw = pa.DataFrameSchema(
+        {
+            'NI_Apartment_Price_Index': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(10), pa.Check.le(300)],
+            ),
+            'NI_Residential_Property_Price_Index': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(10), pa.Check.le(300)],
+            ),
+        },
+        index=pa.Index(
+            pa.String,
+            name='Quarter_Year',
+            checks=[
+                pa.Check(lambda s: s.str.match(r'^Q[1-4] \d{4}$').all(), element_wise=False),
+                pa.Check(lambda s: all([v in s.values for v in [recent_price_quarter, 'Q1 2005']]), element_wise=False),
+            ]
+        ),
+    )
+
+    schema_lgd = pa.DataFrameSchema(
+        {
+            c: pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(10), pa.Check.le(300)],
+            )
+            for c in price_changes_lgd.columns
+        },
+        index=pa.Index(
+            pa.String,
+            name='Quarter_Year',
+            checks=[
+                pa.Check(lambda s: s.str.match(r'^Q[1-4] \d{4}$').all(), element_wise=False),
+                pa.Check(lambda s: all([v in s.values for v in [recent_price_quarter, 'Q1 2005']]), element_wise=False),
+            ]
+        ),
+    )
+
+    try:
+        validated_nw = schema_nw.validate(price_changes_nw, lazy=False)
+        validated_lgd = schema_lgd.validate(price_changes_lgd, lazy=False)
+    except (pa.errors.SchemaError) as e:
+        # Re-raise as ValueError with context (keeps stacktrace and message)
+        raise ValueError(f"NIHPI dataframes validation failed: {e}") from e
+
+    return validated_nw, validated_lgd
+
+def validate_houses_dataframe(
+    houses: pd.DataFrame,
+    min_property_area=2,
+    max_property_area=8000,
+) -> pd.DataFrame:
+    """Validate the houses dataframe using pandera and return the validated copy.
+
+    Raises ValueError if validation fails (wraps pandera errors for a clearer message).
+    """
+    schema_houses = pa.DataFrameSchema(
+        {
+            'type': pa.Column(
+                pa.String,
+                nullable=False,
+                checks=pa.Check.isin(['Domestic']),
+            ),
+            'home_type': pa.Column(
+                pa.String,
+                nullable=False,
+                checks=pa.Check.isin(['House', 'Flat']),
+            ),
+            'area_m2': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(min_property_area), pa.Check.le(max_property_area)],
+            ),
+            'Longitude': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.gt(-8.2), pa.Check.lt(-5.4)],
+            ),
+            'Latitude': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.gt(54.0), pa.Check.lt(55.4)],
+            ),
+            'value': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(5000), pa.Check.le(10_000_000)],
+            ),
+            'price_per_sq_m': pa.Column(
+                pa.Float,
+                nullable=False,
+                checks=[pa.Check.ge(100), pa.Check.le(10_000)],
+            ),
+        }
+    )
+
+    try:
+        validated_houses = schema_houses.validate(houses, lazy=False)
+    except (pa.errors.SchemaError) as e:
+        # Re-raise as ValueError with context (keeps stacktrace and message)
+        raise ValueError(f"Houses dataframe validation failed: {e}") from e
+
+    return validated_houses
