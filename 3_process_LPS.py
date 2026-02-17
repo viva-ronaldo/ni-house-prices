@@ -42,7 +42,7 @@ args = parser.parse_args()
 factors_only = args.factors_only
 
 use_nihpi_api = False  # API is not updating as of Q3 2024
-recent_price_quarter = 'Q2 2025'  # use latest quarter if use_nihpi_api = True, otherwise use this quarter in pre-downloaded data
+recent_price_quarter = 'Q3 2025'  # use latest quarter if use_nihpi_api = True, otherwise use this quarter in pre-downloaded data
 refresh_nearest_five_postcodes = False  # make true if the LPS data ever change (new postcodes added)
 
 min_properties_per_postcode = 10
