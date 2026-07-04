@@ -153,7 +153,7 @@
                         
               <p>Values for each postcode come from a <a href='https://github.com/viva-ronaldo/ni-house-prices/blob/main/3_process_LPS.py' aria-label="Link to the source code on Github">simple statistical model</a> of <b>price per square metre</b> dependent on property type, floor area, presence of garden or garage, and postcode, trained on the LPS data. A value is only calculated for postcodes with at least 10 properties in the LPS data, and a small spatial smoothing is applied, to reduce noise and give more weight to postcodes with more data.</p>
 
-              <p>These postcode coefficients are what is shown in the map: they capture <b>the value of the area itself</b>, independent of the particular kinds of properties (size, etc.) that are found in the area.</p>
+              <p>These postcode coefficients, expressed as relative to the overall NI average, are what is shown in the map: they capture <b>the value of the area itself</b>, independent of the particular kinds of properties (size, etc.) that are found in the area.</p>
 
               <p>Slightly simpler models, one each for houses and flats, are used for the Affordability Calculator. These models do not explicitly handle new builds, so a scaling of factor of 1.4 is applied to predicted prices in these cases. This captures quite well the premium that new build listings carry compared to resale properties; e.g., see <a href='https://news.twentyea.co.uk/blog/the-new-build-price-premium-how-much-more-will-we-pay-for-a-brand-new-property' aria-label='Visit supporting source' target='_blank'>here</a>. When a short postcode is used in the calculator, the 70th percentile of the predictions for that short postcode is used, because often new builds are part of a new long postcode that becomes more desirable than the average for that short postcode.</p>
 
@@ -546,7 +546,7 @@
           color: row.html_colour, 
           fillColor: row.html_colour,
           opacity: 1, 
-          weight: 2,
+          weight: 3,
           fillOpacity: 0.3,
         }).bindPopup(
           popup
@@ -561,7 +561,7 @@
         ).on(
           'mouseout', function(e) {
             e.target.setStyle({
-              weight: 2,
+              weight: 3,
               fillOpacity: 0.3
             }),
             e.target.setRadius(Math.max(radius, getMinRadius(map.getZoom())));
@@ -973,7 +973,7 @@
             header: true,
             dynamicTyping: true,
           }).data.slice(0,-1);
-          
+
           props_glm = populate_clustergroup(allpts_data, 30, loaded=true);
           props_glm.addTo(map);
           layerControlPoints.addBaseLayer(props_glm, 'Postcodes');

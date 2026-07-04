@@ -229,10 +229,11 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
                 this_glm = smf.glm(data=train_batch, formula=full_formula).fit()
 
                 postcode_glms.append(namedtuple('glm_slim', ['params', 'bse'])(this_glm.params, this_glm.bse))
+
+                del train_batch, this_glm
             except np.linalg.LinAlgError:
                 print('This batch GLM did not converge; skipping')
-            
-            del train_batch, this_glm
+                del train_batch
             gc.collect()
 
         glm_res.append(postcode_glms)
@@ -261,8 +262,10 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
 
     if normalise_pc_coefs:
         # Normalise coefficients to zero for the map
-        pc_coefs['pc_coef_avg'] -= pc_coefs.pc_coef_avg.mean()
+        #pc_coefs['pc_coef_avg'] -= pc_coefs.pc_coef_avg.mean()
         # SE sizes should still make sense
+        # Use median instead so that half the postcodes are above and half below, so that the colour scale works
+        pc_coefs['pc_coef_avg'] -= pc_coefs.pc_coef_avg.median()
 
     #Save non-postcode coefs for calculator
     non_pc_coefs = (pd.concat([
@@ -272,8 +275,8 @@ def calculate_glm_coefs(df, formula_minus_postcodes, min_properties_per_postcode
         .assign(coef = lambda df: df.index).reset_index(drop=True)
         .groupby('coef', as_index=False)
         .agg(
-            value_mean = ('value', lambda v: np.round(np.mean(v),5)),
-            se_mean = ('se', lambda v: np.round(np.mean(v),5))
+            value_mean = ('value', lambda v: np.round(np.mean(v), 5)),
+            se_mean = ('se', lambda v: np.round(np.mean(v), 5))
             )
     )
 
@@ -338,19 +341,16 @@ def calculate_glm_coefs_by_LSOA(df, formula_minus_lsoas, min_properties_per_lsoa
 
 def convert_price_to_colour(this_ppsqm, all_ppsqm, cmap='BrBG'):
     """ Convert a price per square metre `this_ppsqm` to a colour by comparing to the full domain of prices `all_ppsqm` """
-    breaks = np.nanpercentile(all_ppsqm, [i * 100 / 10 for i in range(0, 11)])
+    # Use custom percentiles for a near-normal distribution:
+    # Bin fractions: [0.04, 0.08, 0.11, 0.13, 0.14, 0.14, 0.13, 0.11, 0.08, 0.04]
+    # Cumulative percentiles: [0, 4, 12, 23, 36, 50, 64, 77, 88, 96, 100]
+    percentiles = [0, 4, 12, 23, 36, 50, 64, 77, 88, 96, 100]
+    breaks = np.nanpercentile(all_ppsqm, percentiles)
     whichbin = np.argmax(this_ppsqm <= np.array(breaks))
-    #this gives equal in 1-10 and one value in 0
-    #cmap_ind = (whichbin/10 - 0.05)
-    #whichbin/10 is 0.1 to 1.0; adjust to 0.05-0.95; then shrink to 0.14-0.86 to avoid plotting extreme colours
-    #cmap_ind = (cmap_ind-0.5)*0.8 + 0.5
-    #and adjust to avoid the middle ~white values - changes it to 0.14-0.46 and 0.54-0.86
-    #cmap_ind = 0.14+0.8*(cmap_ind-0.14) if cmap_ind <= 0.5 else 1-0.8*(1-cmap_ind-0.14)-0.14    
-    #return colors.to_hex(cm.get_cmap(cmap, 10)(cmap_ind))  
 
-    #Make 14 colours (no 'middle' white) but don't use the edge 1s and middle 2
+    #Make 14 colours (no 'middle' white) but don't use the lowest brown (0) and middle 2 (do use the top purple, 13)
     fifteen_map = cm.get_cmap(cmap, 14)  #the index range for this is 0-11 inclusive
-    cols = [fifteen_map(x) for x in [1, 2, 3, 4, 5, 8, 9, 10, 11, 12]]  #list of length 10
+    cols = [fifteen_map(x) for x in [1, 2, 3, 4, 5, 8, 9, 10, 11, 13]]  #list of length 10
     return colors.to_hex(cols[max(whichbin - 1, 0)])  #index the list with 0-9 inclusive
 
 def run_one_smooth_pass(summ_coefs, alpha=1000):
