@@ -20,6 +20,7 @@ import geopandas as gpd
 import gc, glob, re
 import argparse
 import pandera as pa
+from typing import cast
 
 from process_LPS_functions import (
     read_nihpi_api_nationwide,
@@ -63,6 +64,7 @@ lsoa_glm_colour_bands_filename = f'colour_bands_ppsqm_nge10_LSOAglmmethod_{recen
 calculator_coefs_houses_filename = f'calculator_coefs_houses_smoothed_alpha{smoothing_alpha}_{recent_price_quarter_str}.csv'
 calculator_coefs_flats_filename = f'calculator_coefs_flats_smoothed_alpha{smoothing_alpha}_{recent_price_quarter_str}.csv'
 processed_lps_data_path = f'{house_price_data_dir}/other_data/processed_LPS_valuations_{recent_price_quarter_str}.csv'
+ppsqm_sparkline_filename = f'ppsqm_sparkline_factors_{recent_price_quarter_str}.csv'
 
 # Read in data
 
@@ -141,6 +143,65 @@ price_changes_2005_to_current_lgd.index = [
 price_changes_2005_to_current_lgd.index.name = 'LGD'
 print('NIHPI factors by LGD for all property types are:\n', price_changes_2005_to_current_lgd)
 
+# Save the quarterly scaling curves separately: the map needs only a short key
+# per postcode, while these sequences are shared by each property-type/LGD pair.
+price_changes_lgd_by_quarter = price_changes_lgd.copy()
+price_changes_lgd_by_quarter.columns = [
+    c[:-4]
+    .replace('_', ' ')
+    .replace('Armagh City', 'Armagh City,')
+    .replace('Newry', 'Newry,')
+    for c in price_changes_lgd_by_quarter.columns
+]
+start_period = (2005, 1)
+latest_period = (int(recent_price_quarter[-4:]), int(recent_price_quarter[1]))
+quarters = sorted(
+    [q for q in price_changes_nw.index if q in price_changes_lgd_by_quarter.index
+     and start_period <= (int(q[-4:]), int(q[1])) <= latest_period],
+    key=lambda q: (int(q[-4:]), int(q[1]))
+)
+lgd_q1 = price_changes_lgd_by_quarter.loc['Q1 2005'] / Q42004_TO_Q12005_FACTOR
+nw_apts_q12005 = cast(float, price_changes_nw.loc['Q1 2005', 'NI_Apartment_Price_Index'])
+nw_all_q12005 = cast(float, price_changes_nw.loc['Q1 2005', 'NI_Residential_Property_Price_Index'])
+quarterly_factors = []
+for quarter in quarters:
+    nw_row = price_changes_nw.loc[quarter]
+    nw_all = float(nw_row['NI_Residential_Property_Price_Index'])
+    nw_apts = float(nw_row['NI_Apartment_Price_Index'])
+    nw_apts_factor = nw_apts / (
+        nw_apts_q12005 / Q42004_TO_Q12005_FACTOR
+    )
+    nw_all_factor = nw_all / (
+        nw_all_q12005 / Q42004_TO_Q12005_FACTOR
+    )
+    nw_houses_factor = (9 * nw_all_factor - nw_apts_factor) / 8
+    lgd_factors = price_changes_lgd_by_quarter.loc[quarter] / lgd_q1
+    for lgd, lgd_factor in lgd_factors.items():
+        for home_type, nw_type_factor in (
+            ('House', nw_houses_factor),
+            ('Flat', nw_apts_factor),
+        ):
+            quarterly_factors.append({
+                'LGD': lgd,
+                'home_type': home_type,
+                'Quarter_Year': quarter,
+                'factor': lgd_factor * nw_type_factor / nw_all_factor,
+            })
+
+sparkline_factors = pd.DataFrame(quarterly_factors)
+latest_factors = (sparkline_factors[sparkline_factors.Quarter_Year == recent_price_quarter]
+    .set_index(['LGD', 'home_type'])['factor'])
+sparkline_factors['relative_factor'] = [
+    factor / latest_factors.loc[(lgd, home_type)]
+    for lgd, home_type, factor in zip(
+        sparkline_factors.LGD, sparkline_factors.home_type, sparkline_factors.factor
+    )
+]
+sparkline_factors[['LGD', 'home_type', 'Quarter_Year', 'relative_factor']].to_csv(
+    f'static/{ppsqm_sparkline_filename}', index=False
+)
+print(f'Saved quarterly price scaling curves to static/{ppsqm_sparkline_filename}')
+
 # Get the current value calculated by LGD and property type and join on
 ghouses = (
     gpd.GeoDataFrame(houses, geometry=gpd.points_from_xy(houses.Longitude, houses.Latitude))
@@ -198,7 +259,7 @@ houses['area_lt_60_01'] = np.where(houses.area_m2 < 60, 1, 0)
 houses['area_lt_100_01'] = np.where(houses.area_m2 < 100, 1, 0)
 
 #Trim df a bit
-houses = houses.drop(columns=['address', 'lgd', 'desc', 'type',
+houses = houses.drop(columns=['address', 'desc', 'type',
     'price_per_sq_m',
     'has_garage', 'has_other_outbuilding', 'has_garden', 'has_yard',
     'price_per_sq_m_current_by_nw', 'value_current_by_nw'])

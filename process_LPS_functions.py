@@ -405,23 +405,32 @@ def summarise_coefs(houses, coefs_df, soas, region_type='Postcode', suffix='', c
         coefs_ppsqm_name = 'lsoa_coef'
         popup_region_column = 'SOA_LABEL'
 
-    summ_coefs = (houses.groupby(group_keys, as_index=False).agg(
-        n_properties = ('value', len),
-        longitude = ('Longitude', 'max'), # there is only one value per postcode so any agg will do
-        latitude = ('Latitude', 'max'),
-        mean_val = ('value_current_by_lgd', lambda v: round(np.mean(v))),
-        mean_size = ('area_m2', lambda a: round(np.mean(a))),
-        mean_price_per_sq_m = ('price_per_sq_m_current_by_lgd', lambda p: round(np.mean(p)))
-        )
+    aggregate_columns = {
+        'n_properties': ('value', len),
+        'longitude': ('Longitude', 'max'), # there is only one value per postcode so any agg will do
+        'latitude': ('Latitude', 'max'),
+        'mean_val': ('value_current_by_lgd', lambda v: round(np.mean(v))),
+        'mean_size': ('area_m2', lambda a: round(np.mean(a))),
+        'mean_price_per_sq_m': ('price_per_sq_m_current_by_lgd', lambda p: round(np.mean(p))),
+    }
+    if region_type == 'Postcode':
+        aggregate_columns.update({
+            'lgd': ('lgd', 'first'),
+            'house_share': ('home_type', lambda values: (values == 'House').mean()),
+        })
+
+    summ_coefs = (houses.groupby(group_keys, as_index=False).agg(**aggregate_columns)
         .merge(coefs_df, left_on=coefs_join_key_left, right_on=coefs_join_key_right, how='inner')
         .rename(columns={coefs_ppsqm_name: 'ppsqm_delta'})
     )
     summ_coefs['ppsqm_delta'] = np.round(summ_coefs.ppsqm_delta, 1)
 
-    #Do smoothing here; leave mean_price_per_sq_m as is but smooth ppsqm_delta
+    # Keep observed postcode means raw; spatially smooth the relative postcode effect.
     if alpha is not None:
+        mean_price_per_sq_m = summ_coefs['mean_price_per_sq_m'].copy()
         for _ in [1, 2, 3]:
             summ_coefs = run_one_smooth_pass(summ_coefs, alpha=alpha)
+        summ_coefs['mean_price_per_sq_m'] = mean_price_per_sq_m
     
     high_low_popup_colours = {
         'BrBG': ('#7f4909', '#015c53'), 
@@ -435,8 +444,11 @@ def summarise_coefs(houses, coefs_df, soas, region_type='Postcode', suffix='', c
         .merge(soas, left_on='LSOA Code', right_on='SOA_CODE', how='inner')
         .assign(popup_text = lambda df: df.apply(
             lambda row: f'<b>{row[popup_region_column]}</b><br/>' + \
-                f'Mean value £{row.mean_val:,.0f}<br/>' + \
-                f"<b>£{abs(row.ppsqm_delta):,.0f}</b> per sq. m {high_low_strings[0] if row.ppsqm_delta > 0 else high_low_strings[1]} average", axis=1))
+                f"<b>£{abs(row.ppsqm_delta):,.0f}</b> per sq m {high_low_strings[0] if row.ppsqm_delta > 0 else high_low_strings[1]} NI average<br/>" + \
+                f'Average full price <b>£{row.mean_val:,.0f}</b><br/>' + \
+                f'Average price per sq m <b>£{row.mean_price_per_sq_m:,.0f}</b>' + \
+                ('<br/>{{SPARKLINE}}' if region_type == 'Postcode' else ''),
+                axis=1))
         .assign(html_colour = lambda df: df.apply(lambda row: convert_price_to_colour(row.ppsqm_delta, summ_coefs.ppsqm_delta.values, cmap=cmap), axis=1))
         .query("n_properties >= 10")  # for the LSOA case; not needed for Postcode
     )
@@ -447,6 +459,8 @@ def summarise_coefs(houses, coefs_df, soas, region_type='Postcode', suffix='', c
         'mean_val', 'mean_size', 'mean_price_per_sq_m', 'ppsqm_delta',
         'html_colour', 'popup_text',
     ]
+    if region_type == 'Postcode':
+        col_list.extend(['lgd', 'house_share'])
     if region_type == 'LSOA':
         col_list.append('geometry')
 
